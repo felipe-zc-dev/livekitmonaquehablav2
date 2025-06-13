@@ -1,0 +1,164 @@
+# Dockerfile - CORREGIDO según LiveKit Agents docs
+# Optimizado para LiveKit Agents v1.0 + deployment en Render.com
+
+FROM python:3.11-slim AS base
+
+# ✅ Environment variables según mejores prácticas
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    POETRY_VERSION=2.1.3 \
+    POETRY_HOME="/opt/poetry" \
+    POETRY_CACHE_DIR=/tmp/poetry-cache
+
+# ✅ System dependencies para LiveKit Agents
+# Según docs: ffmpeg, audio libraries necesarias
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    wget \
+    git \
+    # Audio/Video processing (requerido por LiveKit Agents)
+    ffmpeg \
+    libsndfile1 \
+    portaudio19-dev \
+    libasound2-dev \
+    pkg-config \
+    alsa-utils \
+    # SSL certificates
+    ca-certificates \
+    # Cleanup
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# ✅ Install Poetry (método oficial)
+RUN pip install poetry==$POETRY_VERSION
+
+# ✅ Configure Poetry para containers (según docs Poetry)
+RUN poetry config virtualenvs.create false \
+    && poetry config cache-dir $POETRY_CACHE_DIR
+
+WORKDIR /app
+
+# =============================================================================
+# DEVELOPMENT STAGE - Para Windows local + debugging
+# =============================================================================
+FROM base AS development
+
+# ✅ Copy dependency files primero (mejor Docker cache)
+COPY pyproject.toml poetry.lock* ./
+
+# ✅ CORREGIDO: Crear README.md requerido por Poetry
+RUN echo "# MonaQueHabla Voice Agent" > README.md
+
+# ✅ Install dependencies (Poetry ya no falla)
+RUN poetry install --no-root --no-interaction --no-ansi \
+    && rm -rf $POETRY_CACHE_DIR
+
+# ✅ Copy application code
+COPY agents/ ./agents/
+COPY core/ ./core/
+COPY services/ ./services/
+COPY personas/ ./personas/
+COPY frontend/ ./frontend/
+COPY agent.py ./
+
+# ✅ Create logs directory
+RUN mkdir -p /app/logs
+
+# ✅ Create non-root user para seguridad
+RUN useradd --create-home --shell /bin/bash appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+# ✅ Health check para development (puerto 8081 según docs)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8081/health || exit 1
+
+# ✅ Expose port para health check
+EXPOSE 8081
+
+# ✅ Default command para development
+CMD ["python", "agent.py", "start"]
+
+# =============================================================================
+# PRODUCTION STAGE - Para Render.com
+# =============================================================================
+FROM base AS production
+
+# ✅ Copy dependency files
+COPY pyproject.toml poetry.lock* ./
+
+# ✅ CORREGIDO: Crear README.md requerido por Poetry
+RUN echo "# MonaQueHabla Voice Agent" > README.md
+
+# ✅ Install ONLY production dependencies
+# Según docs LiveKit: minimal container size importante
+RUN poetry install --only=main --no-root --no-interaction --no-ansi \
+    && rm -rf $POETRY_CACHE_DIR
+
+# ✅ Copy application code
+COPY agents/ ./agents/
+COPY core/ ./core/
+COPY services/ ./services/
+COPY personas/ ./personas/
+COPY frontend/ ./frontend/
+COPY agent.py ./
+
+# ✅ Pre-download AI models para mejor startup time
+# Según docs LiveKit Agents: usar prewarm para modelos pesados
+# RUN python -c "
+# try:
+#     from livekit.plugins import silero
+#     silero.VAD.load()
+#     print('✅ VAD model preloaded')
+# except Exception as e:
+#     print(f'⚠️ VAD preload failed: {e}')
+#     pass
+# "
+
+# ✅ Create logs directory con permisos correctos
+RUN mkdir -p /app/logs
+
+# ✅ Create non-root user para production security
+RUN useradd --create-home --shell /bin/bash --uid 1000 appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+# ✅ Health check para production
+# Timeout más largo para Render.com startup
+HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=5 \
+    CMD curl -f http://localhost:8081/health || exit 1
+
+# ✅ Expose health check port
+EXPOSE 8081
+
+# ✅ Production command
+CMD ["python", "agent.py", "start"]
+
+# =============================================================================
+# TOKEN SERVER STAGE - Optimizado para token server
+# =============================================================================
+FROM base AS token-server
+
+# Minimal dependencies para token server
+COPY pyproject.toml poetry.lock* ./
+RUN poetry install --only=main --no-root --no-interaction --no-ansi \
+    && rm -rf $POETRY_CACHE_DIR
+
+# Solo archivos necesarios para token server
+COPY services/ ./services/
+COPY frontend/ ./frontend/
+COPY core/config.py ./core/
+COPY core/__init__.py ./core/
+
+RUN mkdir -p /app/logs \
+    && useradd --create-home --shell /bin/bash --uid 1000 appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+HEALTHCHECK --interval=20s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+CMD ["python", "services/token_server.py"]

@@ -1,0 +1,48 @@
+###############################################################################
+# MonaQueHabla – Docker build context pruning
+###############################################################################
+
+# Git & VCS
+.git
+.gitignore
+.gitattributes
+
+# CI / scripts de despliegue
+deploy-render.*
+render.yaml          # se copia desde repo raíz mediante build-args si lo necesitas
+
+# Entornos virtuales / dependencias locales
+.venv/
+venv/
+ENV/
+frontend/node_modules/
+
+# Artefactos de build
+build/
+dist/
+frontend/dist/
+frontend/.vite/
+wheels/
+*.egg-info/
+
+# Cache & pruebas
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.tmp/
+
+# Archivos de sistema / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Archivos temporales y logs
+*.log
+*.coverage
+*.mdmp
+
+# Documentación (no necesaria en contenedor)
+*.md

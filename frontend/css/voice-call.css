@@ -1,0 +1,414 @@
+/**
+ * Voice Call Modal - CSS Module Separado
+ * Compatible con tu sistema existente
+ * Modos: Character.AI y WhatsApp Fullscreen
+ */
+
+/* =============================================
+   VOICE CALL DESIGN TOKENS
+   ============================================= */
+:root {
+    /* Character.ai Colors */
+    --voice-char-primary: #1e1b4b;
+    --voice-char-secondary: #7c3aed;
+    --voice-char-accent: #3b82f6;
+    --voice-char-text: #ffffff;
+    --voice-char-text-secondary: rgba(255, 255, 255, 0.8);
+
+    /* WhatsApp Colors (complementan tus existentes) */
+    --voice-wa-overlay: rgba(11, 20, 26, 0.3);
+    --voice-wa-text: white;
+    --voice-wa-text-secondary: rgba(255, 255, 255, 0.9);
+
+    /* Voice Activity */
+    --voice-activity-active: rgba(0, 168, 132, 0.9);
+    --voice-activity-thinking: rgba(255, 171, 0, 0.9);
+
+    /* Voice Transitions */
+    --voice-transition-fast: 150ms ease-out;
+    --voice-transition-normal: 250ms ease-out;
+    --voice-transition-slow: 350ms ease-out;
+}
+
+/* =============================================
+   BASE VOICE CALL OVERLAY - PANTALLA COMPLETA
+   ============================================= */
+.call-overlay {
+    /* Mantener la base de tu CSS existente */
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--voice-transition-normal);
+    pointer-events: none;
+}
+
+.call-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* =============================================
+   MODO 1: CHARACTER.AI STYLE
+   ============================================= */
+.call-overlay.voice-mode-character {
+    background: radial-gradient(ellipse at top,
+            var(--voice-char-secondary) 0%,
+            var(--voice-char-primary) 50%,
+            var(--voice-char-accent) 100%);
+}
+
+.call-overlay.voice-mode-character .call-content {
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    padding: 2rem;
+    background: none;
+    border: none;
+    box-shadow: none;
+    animation: voiceSlideInCharacter var(--voice-transition-slow) ease-out;
+}
+
+.call-overlay.voice-mode-character .voice-brand-section {
+    margin-bottom: 3rem;
+    display: block;
+}
+
+.call-overlay.voice-mode-character .voice-brand-logo {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 3rem;
+    color: var(--voice-char-text);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.call-overlay.voice-mode-character .voice-brand-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: relative;
+    z-index: 2;
+}
+
+.call-overlay.voice-mode-character .voice-brand-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--voice-char-text);
+    z-index: 1;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+/* Cuando la imagen se carga correctamente, ocultar el fallback */
+.call-overlay.voice-mode-character .voice-brand-image:not([style*='display: none'])+.voice-brand-fallback {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.call-overlay.voice-mode-character .voice-brand-name {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--voice-char-text);
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.02em;
+}
+
+.call-overlay.voice-mode-character .call-title {
+    color: var(--voice-char-text);
+}
+
+.call-overlay.voice-mode-character .call-status {
+    color: var(--voice-char-text-secondary);
+    font-size: 1.125rem;
+    font-weight: 500;
+    margin-bottom: 3rem;
+}
+
+/* Ocultar avatar section en modo character */
+.call-overlay.voice-mode-character .call-avatar-container,
+.call-overlay.voice-mode-character .avatar-section {
+    display: none;
+}
+
+/* =============================================
+   MODO 2: WHATSAPP FULLSCREEN STYLE
+   ============================================= */
+.call-overlay.voice-mode-whatsapp {
+    background: var(--voice-wa-overlay);
+}
+
+.call-overlay.voice-mode-whatsapp.has-avatar {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.call-overlay.voice-mode-whatsapp.has-avatar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(1px) brightness(0.8);
+    -webkit-backdrop-filter: blur(1px) brightness(0.8);
+}
+
+.call-overlay.voice-mode-whatsapp .call-content {
+    position: relative;
+    z-index: 10;
+    /* PANTALLA COMPLETA - Sin card flotante */
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    animation: voiceFadeInWhatsApp var(--voice-transition-normal) ease-out;
+}
+
+.call-overlay.voice-mode-whatsapp .voice-brand-section {
+    display: none;
+}
+
+.call-overlay.voice-mode-whatsapp .call-avatar-container,
+.call-overlay.voice-mode-whatsapp .avatar-section {
+    display: none;
+    /* Avatar grande no necesario cuando está de fondo */
+}
+
+.call-overlay.voice-mode-whatsapp .call-info {
+    margin-top: auto;
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.call-overlay.voice-mode-whatsapp .call-title {
+    color: var(--voice-wa-text);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    font-size: 1.75rem;
+    font-weight: 600;
+}
+
+.call-overlay.voice-mode-whatsapp .call-status {
+    color: var(--voice-wa-text-secondary);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    font-size: 1.125rem;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+.call-overlay.voice-mode-whatsapp .call-controls {
+    margin-bottom: calc(2rem + env(safe-area-inset-bottom));
+}
+
+/* =============================================
+   VOICE ACTIVITY INDICATOR
+   ============================================= */
+.voice-activity {
+    position: absolute;
+    top: calc(1rem + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--voice-activity-active);
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow:
+        0 2px 8px rgba(0, 168, 132, 0.4),
+        0 0 0 4px rgba(0, 168, 132, 0.1);
+    animation: voiceActivityPulse 2s infinite ease-in-out;
+    z-index: 1020;
+}
+
+.voice-activity::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    opacity: 0.9;
+}
+
+.voice-activity.thinking {
+    background: var(--voice-activity-thinking);
+    box-shadow:
+        0 2px 8px rgba(255, 171, 0, 0.4),
+        0 0 0 4px rgba(255, 171, 0, 0.1);
+    animation: voiceThinkingPulse 1.5s infinite ease-in-out;
+}
+
+/* =============================================
+   VOICE BRAND SECTION (Solo Character.AI)
+   ============================================= */
+.voice-brand-section {
+    display: none;
+    /* Hidden by default */
+}
+
+/* =============================================
+   CALL CONTROLS OVERRIDE PARA VOICE
+   ============================================= */
+.call-overlay .call-control-btn {
+    /* Mejorar los botones existentes para voice modes */
+    transition: all var(--voice-transition-fast);
+    backdrop-filter: blur(10px);
+}
+
+.call-overlay .call-control-btn:hover {
+    transform: scale(1.05);
+}
+
+.call-overlay .call-control-btn:active {
+    transform: scale(0.95);
+}
+
+/* =============================================
+   ANIMATIONS ESPECÍFICAS DE VOICE
+   ============================================= */
+@keyframes voiceSlideInCharacter {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes voiceFadeInWhatsApp {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes voiceActivityPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow:
+            0 2px 8px rgba(0, 168, 132, 0.4),
+            0 0 0 4px rgba(0, 168, 132, 0.1);
+    }
+
+    50% {
+        transform: scale(1.1);
+        box-shadow:
+            0 4px 12px rgba(0, 168, 132, 0.6),
+            0 0 0 8px rgba(0, 168, 132, 0.2);
+    }
+}
+
+@keyframes voiceThinkingPulse {
+
+    0%,
+    100% {
+        opacity: 0.8;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+/* =============================================
+   RESPONSIVE ESPECÍFICO PARA VOICE
+   ============================================= */
+@media (max-width: 480px) {
+    .call-overlay.voice-mode-character .call-content {
+        padding: 1.5rem;
+    }
+
+    .call-overlay.voice-mode-character .voice-brand-name {
+        font-size: 1.75rem;
+    }
+
+    .call-overlay.voice-mode-whatsapp .call-content {
+        padding: 1.5rem 1rem;
+    }
+
+    .call-overlay.voice-mode-whatsapp .call-title {
+        font-size: 1.5rem;
+    }
+
+    .call-overlay.voice-mode-whatsapp .call-status {
+        font-size: 1rem;
+    }
+
+    .voice-activity {
+        top: calc(0.75rem + env(safe-area-inset-top));
+    }
+}
+
+@media (min-width: 768px) {
+    .call-overlay.voice-mode-whatsapp .call-title {
+        font-size: 2rem;
+    }
+
+    .call-overlay.voice-mode-whatsapp .call-status {
+        font-size: 1.25rem;
+    }
+}
+
+/* =============================================
+   UTILIDADES VOICE MODE
+   ============================================= */
+.voice-mode-hidden {
+    display: none !important;
+}
+
+.voice-mode-visible {
+    display: block !important;
+}
+
+/* Override para elementos específicos del voice mode */
+.call-overlay[class*="voice-mode"] .welcome-message {
+    display: none;
+}
+
+/* Asegurar que el voice activity esté visible en ambos modos */
+.call-overlay.active .voice-activity {
+    display: flex;
+}
+
+.call-overlay:not(.active) .voice-activity {
+    display: none;
+}

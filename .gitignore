@@ -1,0 +1,82 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
+# Environment files (mantener seguridad)
+.env
+.env.*
+*.env
+.env.local
+.env.production
+.env.staging
+.env.example
+.env.local.*
+.env.local.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# LiveKit native
+livekit-native/livekit.pid
+livekit-native
+# Temporary files
+.tmp/
+.cache/
+
+check.txt
+dia_dia.md
+server-livekit-local.ps1
+README-poetry.md
+# Docker artefacts
+*.pid
+*.sock
+*.log
+# Imágenes y volúmenes locales
+docker-data/
+
+# Entorno virtual
+.venv/
+venv/
+ENV/
+_DOCUMENTOS/
+deploy-render.ps1
+deploy-render.sh
+.coverage
+
+# Configuración / línea base (sí se versionan)
+!.pre-commit-config.yaml
+!.editorconfig
+!.secrets.baseline

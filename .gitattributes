@@ -1,0 +1,31 @@
+###############################################################################
+# MonaQueHabla – line-ending & diff rules
+###############################################################################
+
+# ---------- reglas generales ----------
+* text=auto eol=lf
+
+# ---------- scripts de plataforma ----------
+*.ps1  text eol=crlf
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.sh   text eol=lf
+
+# ---------- código & configs ----------
+*.{py,js,ts,jsx,tsx,css,html,xml,json,yaml,yml,toml} text eol=lf
+Dockerfile*        text eol=lf
+*.conf             text eol=lf
+*.ini              text eol=lf
+
+# ---------- documentos ----------
+*.{md,txt}         text eol=lf
+
+# ---------- binarios ----------
+*.{png,jpg,jpeg,gif,ico,woff,woff2,ttf,eot,zip,tar,gz,mp4,webm,exe,dll,so,dylib} binary
+*.{egg,wheel}      binary
+*.py[co]           binary
+*.pyd              binary
+*.log              binary
+
+# ---------- datos especiales ----------
+*.ipynb            text eol=lf

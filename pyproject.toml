@@ -1,0 +1,127 @@
+# Build system - REQUERIDO PRIMERO
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# ✅ METADATOS PRINCIPALES - PEP 621 (Poetry 2.0+ soportado)
+[project]
+name = "monaquehabla"
+version = "1.0.0"
+description = "Asistente conversacional multimodal usando LiveKit Agents 1.0"
+authors = [{ name = "Felipe Castro", email = "felipe@example.com" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+keywords = ["livekit", "ai", "voice", "chatbot", "agents"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Communications :: Chat",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# ✅ DEPENDENCIAS PRINCIPALES - PEP 621 (Poetry 2.0+ soportado)
+dependencies = [
+    "livekit==1.0.6",
+    "livekit-api==1.0.2",
+    "livekit-agents[openai,cartesia,elevenlabs,deepgram,silero,turn-detector,aws]==1.0.19",
+    "Flask>=3.1.0",
+    "flask-cors>=5.0.1",
+    "python-dotenv>=1.1.0",
+    "PyYAML>=6.0.2",
+    "psutil>=7.0.0",
+    "pydantic>=2.11.4",
+    "structlog>=25.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/tu-usuario/monaquehabla"
+Repository = "https://github.com/tu-usuario/monaquehabla"
+Documentation = "https://github.com/tu-usuario/monaquehabla"
+
+[project.scripts]
+monaquehabla = "agent:main"
+token-server = "services.token_server:main"
+
+# ✅ CONFIGURACIÓN POETRY - Solo lo que PEP 621 no cubre
+[tool.poetry]
+package-mode = true
+
+# Estructura del proyecto (Poetry específico)
+packages = [
+    { include = "agents" },
+    { include = "core" },
+    { include = "services" },
+]
+include = ["personas/*.yaml"]
+
+# ✅ DEPENDENCY GROUPS - SINTAXIS POETRY (NO PEP 621)
+# Según docs: "Dependency groups must still be specified in the tool.poetry section"
+[tool.poetry.group.dev.dependencies]
+poetry-plugin-export = "^1.8"
+black = "^25.1.0"
+ruff = "^0.11.8"
+mypy = "^1.15.0"
+pre-commit = "^4.2.0"
+types-PyYAML = "^6.0.12"
+types-Flask-Cors = "^5.0.0"
+detect-secrets = "^1.5.0"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.1"
+pytest-cov = "^4.1.0"
+
+# ✅ HERRAMIENTAS DE DESARROLLO
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+skip-string-normalization = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "S",   # flake8-bandit
+    "UP",  # pyupgrade
+    "C90", # mccabe
+]
+ignore = ["S104"] # hardcoded-bind-all-interfaces
+
+[tool.ruff.lint.isort]
+known-first-party = ["agents", "core", "services"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+exclude = ["tests/", ".venv/", "build/", "dist/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+addopts = "--cov=agents --cov=core --cov=services --cov-report=term-missing"
+asyncio_mode = "auto"
+
+# ✅ PYLINT CONFIGURATION
+[tool.pylint.MASTER]
+disable = [
+    "W0703", # broad-except
+    "R0903", # too-few-public-methods
+    "R0913", # too-many-arguments
+]
+
+[tool.pylint.FORMAT]
+max-line-length = 100
