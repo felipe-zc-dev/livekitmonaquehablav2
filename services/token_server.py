@@ -49,7 +49,7 @@ if not LIVEKIT_URL.startswith("wss://") and not LIVEKIT_URL.startswith("ws://loc
     )
 
 # Crear aplicación Flask
-app = Flask(__name__, static_folder="/app/frontend", static_url_path="")
+app = Flask(__name__, static_folder="frontend", static_url_path="")
 
 # Configurar CORS correctamente para toda la aplicación
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -65,7 +65,7 @@ MAX_ATTRIBUTES_SIZE = 500  # Caracteres
 @app.route("/")
 def index() -> Response:
     """Sirve la página principal de la aplicación."""
-    return send_from_directory("/app/frontend", "index.html")
+    return send_from_directory("frontend", "index.html")
 
 
 def generate_room_name(user_id: str) -> str:
