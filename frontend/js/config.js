@@ -41,7 +41,7 @@ const CONFIG = {
      */
     livekit: {
         // URLs del servidor (producción/desarrollo)
-        tokenEndpoint: "https://token-server-91dg.onrender.com/getToken",
+        tokenEndpoint: "https://web-server-mona-e23l.onrender.com/getToken",
         wsUrl: "wss://monaquehabla-226n27am.livekit.cloud",
 
         // URLs alternativas para desarrollo local
@@ -324,7 +324,7 @@ const CONFIG = {
          */
         notifications: {
             /** @type {boolean} Notificaciones toast habilitadas */
-            enabled: true,
+            enabled: false,
             /** @type {number} Duración por defecto en ms */
             duration: 3000,
             /** @type {number} Máximo número visible simultáneamente */
@@ -343,7 +343,7 @@ const CONFIG = {
              */
             connectionBadge: {
                 /** @type {boolean} Badge habilitado */
-                enabled: true,
+                enabled: false,
                 /** @type {boolean} Mostrar latencia en badge */
                 showLatency: true,
                 /** @type {boolean} Mostrar puntos de calidad */

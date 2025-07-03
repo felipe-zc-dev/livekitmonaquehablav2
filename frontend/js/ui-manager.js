@@ -553,7 +553,7 @@ class UIManager {
 
             // ✅ NUEVO: Marcar como último mensaje del bot para replay
             if (sender === "bot" && !isStreaming) {
-                this._markAsLatestBotMessage(messageEl);
+                // this._markAsLatestBotMessage(messageEl);
             }
 
             return messageEl;
@@ -649,7 +649,7 @@ class UIManager {
 
                 messageEl.innerHTML = formattedContent;
                 this._addTimestamp(messageEl, "bot");
-                this._markAsLatestBotMessage(messageEl);
+                // this._markAsLatestBotMessage(messageEl);
             } else {
                 const cursor = messageEl.querySelector(".cursor");
                 messageEl.innerHTML = formattedContent;
