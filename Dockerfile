@@ -1,88 +1,83 @@
 # Dockerfile - OPTIMIZADO para Render.com + LiveKit Agents v1.0
-# Estrategia: pip + requirements.txt (NO Poetry en producción)
-# Multi-stage: base -> deps -> production
-# ARG SERVICE para agent vs token-server
+# Basado en tu Dockerfile.local que funciona + patrones oficiales
 
-# =============================================================================
-# BASE STAGE - Dependencias del sistema
-# =============================================================================
-FROM python:3.11-slim AS base
+FROM python:3.11-slim
 
+# ============================================================================
+# VARIABLES DE ENTORNO OPTIMIZADAS
+# ============================================================================
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PYTHONPATH="/app"
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# ✅ System dependencies - OPTIMIZADAS para LiveKit Agents
-# Según docs oficiales: https://docs.livekit.io/agents/
+# ============================================================================
+# DEPENDENCIAS DEL SISTEMA - Basadas en tu Dockerfile.local que funciona
+# ============================================================================
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Build essentials
-    build-essential \
-    curl \
-    # Audio processing (SOLO para voice agent, no token server)
+    # Build essentials (solo lo necesario)
+    gcc \
+    g++ \
+    python3-dev \
+    # Audio/Video processing (requerido por LiveKit Agents)
     ffmpeg \
     libsndfile1 \
+    # Networking
+    curl \
     # SSL certificates
     ca-certificates \
+    # Cleanup
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+# ============================================================================
+# WORKDIR
+# ============================================================================
 WORKDIR /app
 
-# =============================================================================
-# DEPS STAGE - Python dependencies con pip optimizado
-# =============================================================================
-FROM base AS deps
-
-# ✅ CRÍTICO: requirements.txt ANTES que código (Docker cache)
+# ============================================================================
+# INSTALL DEPENDENCIES - requirements.txt (generado desde Poetry)
+# ============================================================================
 COPY requirements.txt ./
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# ✅ Install dependencies - pip (NO Poetry) para máxima compatibilidad Render
-RUN pip install --no-cache-dir -r requirements.txt
-
-# =============================================================================
-# PRODUCTION STAGE - Runtime optimizado
-# =============================================================================
-FROM base AS production
-
-# ✅ ENV SERVICE - Render.com pasa como environment variable
-ENV SERVICE=${SERVICE:-agent}
-
-# ✅ Copy Python dependencies desde deps stage
-COPY --from=deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=deps /usr/local/bin /usr/local/bin
-
-# ✅ Copy application code - ESTRUCTURA según tu docker-compose
+# ============================================================================
+# COPY APPLICATION - MISMA ESTRUCTURA QUE FUNCIONA EN TU LOCAL
+# ============================================================================
+COPY agents/ ./agents/
 COPY core/ ./core/
 COPY services/ ./services/
 COPY personas/ ./personas/
-
-# ✅ Copy específico por servicio
-COPY agent.py ./
-COPY agents/ ./agents/
-
-# ✅ Frontend solo para token-server
 COPY frontend/ ./frontend/
+COPY agent.py ./
 
-# ✅ Create logs directory
+# ============================================================================
+# CREATE LOGS DIRECTORY
+# ============================================================================
 RUN mkdir -p /app/logs
 
-# ✅ Non-root user (security best practice Render.com)
-RUN useradd --create-home --shell /bin/bash --uid 1000 appuser \
-    && chown -R appuser:appuser /app
+# ============================================================================
+# SECURITY - Non-root user
+# ============================================================================
+RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser && \
+    chown -R appuser:appuser /app
 USER appuser
 
-# ✅ Health checks por servicio
-HEALTHCHECK --interval=30s --timeout=15s --start-period=45s --retries=5 \
-    CMD if [ "$SERVICE" = "token-server" ]; then \
-        curl -f http://localhost:8000/health || exit 1; \
-    else \
-        curl -f http://localhost:8081/health || exit 1; \
-    fi
+# ============================================================================
+# HEALTH CHECK
+# ============================================================================
+HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=5 \
+    CMD curl -f http://localhost:8081/health || exit 1
 
-# ✅ Expose ports dinámicos
-EXPOSE 8000 8081
 
-# ✅ CMD dinámico por servicio
-CMD sh -c 'if [ "$SERVICE" = "token-server" ]; then python services/token_server.py; else python agent.py start; fi'
+RUN python agent.py download-files
+# ============================================================================
+# EXPOSE PORTS
+# ============================================================================
+EXPOSE 8081
+
+# ============================================================================
+# COMANDO - IGUAL QUE TU LOCAL QUE FUNCIONA
+# ============================================================================
+CMD ["python", "agent.py", "start"]

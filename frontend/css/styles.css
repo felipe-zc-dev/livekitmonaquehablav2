@@ -58,8 +58,8 @@
     --shadow-call-overlay: 0 25px 50px rgba(0, 0, 0, 0.8);
 
     /* Typography */
-    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-        'Roboto', 'Helvetica Neue', sans-serif;
+    --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Roboto", "Helvetica Neue", sans-serif;
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
     --font-size-base: 1rem;
@@ -111,6 +111,10 @@
     --status-connecting: var(--color-warning);
     --status-connected: var(--color-success);
     --status-error: var(--color-danger);
+    /* ✅ AGREGAR: Ring colors para consistency */
+    --ring-warning: rgba(255, 171, 0, 0.3); /* Ring para warning */
+    --ring-primary: rgba(99, 102, 241, 0.3); /* Ring para primary */
+    --ring-size: 0 0 0 4px; /* Ring size standard */
 }
 
 /* =============================================
@@ -506,7 +510,6 @@ body {
 }
 
 @keyframes blink {
-
     0%,
     50% {
         opacity: 1;
@@ -577,7 +580,6 @@ body {
 }
 
 @keyframes typingBounce {
-
     0%,
     80%,
     100% {
@@ -708,6 +710,16 @@ body {
 /* =============================================
      AUDIO BUTTON STATES - Required for JS functionality
      ============================================= */
+/**
+ * ✅ OPCIONAL: Agregar transiciones suaves entre estados
+ */
+.audio-btn {
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.audio-btn:hover:not(.audio-required) {
+    transform: scale(1.05);
+}
 
 .audio-btn.animate-pulse {
     animation: pulse 2s infinite;
@@ -715,12 +727,13 @@ body {
 
 .audio-btn.audio-required {
     background-color: var(--color-warning);
+    color: white !important;
     animation: pulse 2s infinite;
-    color: white;
 }
 
 .audio-btn.enabled {
     background-color: var(--color-primary);
+    color: white !important;
     animation: none;
 }
 
@@ -731,6 +744,26 @@ body {
 
 .call-btn.active {
     background-color: var(--color-primary);
+}
+
+.audio-btn.muted {
+    background-color: var(--color-warning) !important;
+    color: white !important;
+    animation: none;
+}
+
+.audio-btn.audio-required::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background-color: var(
+        --color-danger
+    ); /* Mismo color que el botón para coherencia */
+    border: 2px solid var(--color-surface); /* Border para contraste */
+    border-radius: 50%;
 }
 
 /* =============================================
@@ -811,70 +844,6 @@ body {
     z-index: 20;
 }
 
-.voice-activity-content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    background: rgba(0, 168, 132, 0.9);
-    /* Verde WhatsApp */
-    border-radius: var(--border-radius-full);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 2px 8px rgba(0, 168, 132, 0.4),
-        0 0 0 4px rgba(0, 168, 132, 0.1);
-    animation: voiceActivityPulse 2s infinite ease-in-out;
-}
-
-/* Punto interno del indicador */
-.voice-activity-content::after {
-    content: '';
-    width: 8px;
-    height: 8px;
-    background: white;
-    border-radius: 50%;
-    opacity: 0.9;
-}
-
-/* Animación del punto de actividad de voz */
-@keyframes voiceActivityPulse {
-
-    0%,
-    100% {
-        transform: scale(1);
-        box-shadow: 0 2px 8px rgba(0, 168, 132, 0.4),
-            0 0 0 4px rgba(0, 168, 132, 0.1);
-    }
-
-    50% {
-        transform: scale(1.1);
-        box-shadow: 0 4px 12px rgba(0, 168, 132, 0.6),
-            0 0 0 8px rgba(0, 168, 132, 0.2);
-    }
-}
-
-/* Estado pensando - cambiar a amarillo */
-.voice-activity-content.thinking {
-    background: rgba(255, 171, 0, 0.9);
-    box-shadow: 0 2px 8px rgba(255, 171, 0, 0.4),
-        0 0 0 4px rgba(255, 171, 0, 0.1);
-    animation: voiceThinkingPulse 1.5s infinite ease-in-out;
-}
-
-@keyframes voiceThinkingPulse {
-
-    0%,
-    100% {
-        opacity: 0.8;
-        transform: scale(1);
-    }
-
-    50% {
-        opacity: 1;
-        transform: scale(1.05);
-    }
-}
-
 /* Ocultar elementos innecesarios del voice activity */
 .voice-wave-container,
 .voice-activity-label {
@@ -909,7 +878,6 @@ body {
 }
 
 @keyframes voiceWave {
-
     0%,
     40%,
     100% {
@@ -929,7 +897,6 @@ body {
 }
 
 @keyframes thinkingPulse {
-
     0%,
     100% {
         opacity: 0.3;
@@ -988,13 +955,13 @@ body {
 }
 
 /* Cuando la imagen se carga correctamente, ocultar el fallback */
-.call-avatar-image:not([style*='display: none'])+.call-avatar-fallback {
+.call-avatar-image:not([style*="display: none"]) + .call-avatar-fallback {
     opacity: 0;
     pointer-events: none;
 }
 
 /* Cuando la imagen se carga correctamente, ocultar el fallback */
-.avatar-image:not([style*='display: none'])+.avatar-fallback {
+.avatar-image:not([style*="display: none"]) + .avatar-fallback {
     opacity: 0;
     pointer-events: none;
 }
@@ -1180,18 +1147,6 @@ body {
     }
 }
 
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.5;
-    }
-}
-
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -1324,7 +1279,6 @@ body {
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-
     *,
     *::before,
     *::after {
@@ -1387,7 +1341,6 @@ body {
      PRINT STYLES
      ============================================= */
 @media print {
-
     .app-header,
     .message-input-container,
     .call-overlay {
@@ -1471,24 +1424,52 @@ body {
 
 /* ⚡ BOT TTS REPLAY: Reutiliza estilos existentes */
 .tts-replay-btn {
-    /* Hereda de .audio-play-btn ya existente */
-    display: inline-flex !important;
-    vertical-align: middle;
-    opacity: 0.8;
+    /* Mantener estilos base existentes */
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
     transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    /* ✅ POSICIÓN CORREGIDA: Esquina superior derecha */
+    position: absolute;
+    right: 8px;
+    top: 8px; /* ← CAMBIO: Esquina superior en lugar de centro */
+    transform: none; /* ← CAMBIO: Sin transformación de centrado */
 }
 
 .tts-replay-btn:hover {
-    opacity: 1;
-    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1); /* ✅ Solo escala en hover, sin translateY */
+    color: white;
+}
+
+.tts-replay-btn:active {
+    transform: scale(0.95);
+}
+
+.tts-replay-btn.playing {
+    background: var(--color-primary);
+    animation: pulse 1.5s infinite;
 }
 
 .latest-bot-message {
     position: relative;
+    padding-right: 40px; /* Espacio para botón */
 }
 
 .latest-bot-message::before {
-    content: '';
+    display: none; /* Ocultar la línea */
+    content: "";
     position: absolute;
     left: -3px;
     top: 2px;

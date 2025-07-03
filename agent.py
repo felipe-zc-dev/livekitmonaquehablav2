@@ -11,12 +11,11 @@ from typing import Any
 from dotenv import load_dotenv
 from livekit.agents import AgentSession, JobContext, JobProcess, WorkerOptions, cli, metrics
 from livekit.agents.voice import MetricsCollectedEvent
-from livekit.plugins import aws, deepgram, elevenlabs, silero
+from livekit.plugins import aws, deepgram, silero
 
 from agents.conversational_agent import ConversationalMasterAgent
-
-# Imports absolutos - Compatible con LiveKit 1.0
 from core.config import SystemConfig, UserData, create_user_data, load_persona_config
+from services.audio_replay import setup_audio_replay_integration
 from services.monitoring import get_monitor, start_monitoring
 
 load_dotenv()
@@ -51,18 +50,44 @@ async def entrypoint(ctx: JobContext) -> None:
 
         # Crear agente conversacional
         agent = ConversationalMasterAgent(persona_id, persona_config)
+        # ✅ AWS STT simple
+        tts_model = aws.TTS(
+            voice="Lucia",
+            speech_engine="generative",
+            language="es-ES",
+        )
+        # tts_model = elevenlabs.TTS(
+        #     # tu voz y modelo
+        #     voice_id=persona_config["voice_id"],
+        #     model="eleven_multilingual_v2",
+        #     # 1. Personalización de la voz
+        #     voice_settings=elevenlabs.VoiceSettings(
+        #         stability=0.8,
+        #         similarity_boost=0.7,
+        #         style=0.5,  #
+        #         use_speaker_boost=True,
+        #         speed=0.95,
+        #     ),
+        #     # 2. Idioma y codificación
+        #     encoding="mp3_44100_192",  # mp3_22050_32
+        #     # 3. Streaming y chunks
+        #     streaming_latency=2,
+        #     chunk_length_schedule=[
+        #         100,
+        #         200,
+        #         300,
+        #         400,
+        #     ],  # chunks más grandes reducen overhead :contentReference[oaicite:8]{index=8}
+        #     # 4. SSML y pronunciación
+        #     enable_ssml_parsing=True,
+        #     # 5. Timeout y gestión de conexiones
+        #     # inactivity_timeout=120,  # cierra la conexión tras 2 min de inactividad
+        # )
 
         # Configurar sesión optimizada
         session: AgentSession[UserData] = AgentSession(
             # VAD optimizado
-            vad=silero.VAD.load(
-                min_speech_duration=0.08,
-                min_silence_duration=0.6,
-                prefix_padding_duration=0.2,
-                max_buffered_speech=10.0,
-                activation_threshold=0.4,
-                sample_rate=16000,
-            ),
+            vad=silero.VAD.load(),
             # STT optimizado
             stt=deepgram.STT(
                 # Tus parámetros actuales
@@ -96,33 +121,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 region="us-east-1",
             ),
             # TTS optimizado
-            tts=elevenlabs.TTS(
-                # tu voz y modelo
-                voice_id=persona_config["voice_id"],
-                model="eleven_multilingual_v2",
-                # 1. Personalización de la voz
-                voice_settings=elevenlabs.VoiceSettings(
-                    stability=0.8,
-                    similarity_boost=0.7,
-                    style=0.5,  #
-                    use_speaker_boost=True,
-                    speed=0.95,
-                ),
-                # 2. Idioma y codificación
-                encoding="mp3_44100_192",  # mp3_22050_32
-                # 3. Streaming y chunks
-                streaming_latency=2,
-                chunk_length_schedule=[
-                    100,
-                    200,
-                    300,
-                    400,
-                ],  # chunks más grandes reducen overhead :contentReference[oaicite:8]{index=8}
-                # 4. SSML y pronunciación
-                enable_ssml_parsing=True,
-                # 5. Timeout y gestión de conexiones
-                # inactivity_timeout=120,  # cierra la conexión tras 2 min de inactividad
-            ),
+            tts=tts_model,
             userdata=userdata,
             # Configuraciones de sesión
             turn_detection="vad",
@@ -145,7 +144,8 @@ async def entrypoint(ctx: JobContext) -> None:
 
         # Configurar listeners dinámicos
         _setup_dynamic_listeners(ctx, userdata)
-
+        # ✅ CONFIGURAR AUDIO REPLAY - CORREGIDO
+        await setup_audio_replay_integration(ctx, session)
         # Iniciar sesión
         await session.start(agent=agent, room=ctx.room)
         logger.info("🎉 Sesión iniciada exitosamente")

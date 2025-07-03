@@ -26,7 +26,12 @@ class ConversationalMasterAgent(Agent):
 
         super().__init__(
             instructions=persona_config["instructions"],
-            tools=[change_persona, change_mode, get_user_summary, update_frontend_ui],
+            tools=[
+                change_persona,
+                change_mode,
+                get_user_summary,
+                update_frontend_ui,
+            ],
         )
 
         self.persona_id = persona_id

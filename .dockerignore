@@ -1,48 +1,91 @@
-###############################################################################
-# MonaQueHabla – Docker build context pruning
-###############################################################################
+# .dockerignore - Optimizar builds de Docker para Voice Agent
 
-# Git & VCS
-.git
+# ============================================================================
+# ARCHIVOS DE DESARROLLO (no necesarios en producción)
+# ============================================================================
+.env
+.env.local
+.env.example
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ============================================================================
+# CONTROL DE VERSIONES
+# ============================================================================
+.git/
 .gitignore
 .gitattributes
 
-# CI / scripts de despliegue
-deploy-render.*
-render.yaml          # se copia desde repo raíz mediante build-args si lo necesitas
+# ============================================================================
+# IDEs Y EDITORES
+# ============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# Entornos virtuales / dependencias locales
-.venv/
-venv/
-ENV/
-frontend/node_modules/
+# ============================================================================
+# TESTING Y DESARROLLO
+# ============================================================================
+tests/
+.pytest_cache/
+.coverage
+.nox/
+.tox/
+htmlcov/
 
-# Artefactos de build
+# ============================================================================
+# DOCUMENTACIÓN Y METADATOS
+# ============================================================================
+README.md
+docs/
+*.md
+
+# ============================================================================
+# ARCHIVOS DE BUILD Y CACHE
+# ============================================================================
 build/
 dist/
-frontend/dist/
-frontend/.vite/
-wheels/
 *.egg-info/
-
-# Cache & pruebas
-__pycache__/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
 .cache/
-.tmp/
 
-# Archivos de sistema / IDE
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
-
-# Archivos temporales y logs
+# ============================================================================
+# LOGS Y TEMPORALES
+# ============================================================================
+logs/
 *.log
-*.coverage
-*.mdmp
+tmp/
+temp/
 
-# Documentación (no necesaria en contenedor)
-*.md
+# ============================================================================
+# OS ESPECÍFICOS
+# ============================================================================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+
+# ============================================================================
+# POETRY (no necesario en Docker ya que usamos requirements.txt)
+# ============================================================================
+poetry.lock
+pyproject.toml
+
+# ============================================================================
+# DOCKER
+# ============================================================================
+Dockerfile.local
+docker-compose.yml
+.dockerignore
+
+# ============================================================================
+# RENDER DEPLOYMENT
+# ============================================================================
+render.yaml

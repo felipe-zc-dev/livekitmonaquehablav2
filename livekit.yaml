@@ -1,0 +1,15 @@
+port: 7880
+log_level: debug
+
+rtc:
+  tcp_port: 7881
+  # ✅ NUEVO: Rango libre de conflictos Windows
+  port_range_start: 40000
+  port_range_end: 40100
+  # ✅ FIXES para Firefox/Edge development
+  use_external_ip: false
+  enable_loopback_candidate: true
+  allow_tcp_fallback: true
+
+keys:
+  devkey: secret

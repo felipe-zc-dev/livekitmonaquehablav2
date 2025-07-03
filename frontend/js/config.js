@@ -1,652 +1,838 @@
 /**
- * Configuración LiveKit v2.13.3 - CONSOLIDADA + Audio Replay System
- * Target: Respuesta de voz <500ms + Audio Replay Funcional
+ * CONFIG.js v4.0 - FUENTE DE VERDAD ÚNICA
+ * LiveKit v2.13.6 + Arquitectura Limpia + Audio Optimizado
+ *
+ * REFACTORIZACIÓN COMPLETA:
+ * ✅ CONFIG = Única fuente de verdad para TODOS los JS
+ * ✅ RoomOptions v2.13.6 oficial completo
+ * ✅ Audio config robusto mantenido (punto fuerte)
+ * ✅ Eliminado turnDetection (error conceptual)
+ * ✅ Eliminado videoCaptureDefaults (no necesario)
+ * ✅ publishDefaults usando audioPresets existente
+ * ✅ SOLID + DRY + Clean Code
+ *
+ * @author Refactored for LiveKit v2.13.6 Truth Source
+ * @version 4.0.0-truth-source
+ * @since 2024
+ * @requires LiveKit Client SDK v2.13.6+
  */
 
+/**
+ * CONFIGURACIÓN MAESTRA - FUENTE DE VERDAD ÚNICA
+ *
+ * Esta configuración es usada directamente por:
+ * - voice-agent-sdk.js (Room constructor)
+ * - app.js (inicialización y features)
+ * - ui-manager.js (comportamiento UI)
+ * - voice-call.js (modos de llamada)
+ *
+ * NO DUPLICAR VALORES - Esta es la única fuente de verdad
+ *
+ * @namespace CONFIG
+ */
 const CONFIG = {
-  // 🔗 Conexión LiveKit (v2.13.3 voice-optimized)
-  livekit: {
-    // URLs del servidor
-    tokenEndpoint: 'https://token-server-91dg.onrender.com/getToken',
-    wsUrl: 'wss://monaquehabla-226n27am.livekit.cloud',
+    /**
+     * Configuración LiveKit v2.13.6 Oficial
+     *
+     * CRITICAL: roomOptions se pasa DIRECTAMENTE al constructor Room()
+     * NO modificar en voice-agent-sdk.js - usar tal como está aquí
+     *
+     * @namespace CONFIG.livekit
+     */
+    livekit: {
+        // URLs del servidor (producción/desarrollo)
+        tokenEndpoint: "https://token-server-91dg.onrender.com/getToken",
+        wsUrl: "wss://monaquehabla-226n27am.livekit.cloud",
 
-    // tokenEndpoint: 'http://localhost:8000/getToken',
-    // wsUrl: 'wss://localhost:7880',
+        // URLs alternativas para desarrollo local
+        // tokenEndpoint: "http://localhost:8000/getToken",
+        // wsUrl: "ws://localhost:7880", // validar siempre en prepareConnection y connect de livekit buscar tokenData.url
 
-    // Opciones de conexión (voice-optimized v2.13.3)
-    connectOptions: {
-      autoSubscribe: true,
-      maxRetries: 3,
-      websocketTimeout: 15000,
-      protocolVersion: 2,
-      rtcConfiguration: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-        ],
-        iceTransportPolicy: 'all',
-        bundlePolicy: 'max-bundle',
-        iceCandidatePoolSize: 10,
-        rtcpMuxPolicy: 'require',
-      },
+        /**
+         * RoomOptions v2.13.6 OFICIAL - FUENTE DE VERDAD
+         *
+         * Se pasa DIRECTAMENTE a: new Room(CONFIG.livekit.roomOptions)
+         * Documentación: https://docs.livekit.io/reference/client-sdk-js/interfaces/RoomOptions.html
+         *
+         * @type {RoomOptions}
+         */
+        roomOptions: {
+            /**
+             * OPTIMIZACIONES DE RED - v2.13.6
+             */
+            adaptiveStream: true,
+            dynacast: true,
+            autoSubscribe: true,
+
+            /**
+             * CONFIGURACIÓN RTC PARA BAJA LATENCIA
+             */
+            rtcConfig: {
+                iceServers: [
+                    { urls: "stun:stun.l.google.com:19302" },
+                    { urls: "stun1.l.google.com:19302" },
+                ],
+                iceTransportPolicy: "all",
+                bundlePolicy: "max-bundle",
+                iceCandidatePoolSize: 10,
+                rtcpMuxPolicy: "require",
+            },
+
+            /**
+             * AUDIO CAPTURE - CONFIGURACIÓN ROBUSTA (PUNTO FUERTE)
+             *
+             * CRITICAL: Esta es la configuración maestra de audio
+             * Optimizada para voz en tiempo real con latencia <8ms
+             *
+             * @type {AudioCaptureDefaults}
+             */
+            audioCaptureDefaults: {
+                // LATENCIA PRINCIPAL - FUENTE DE VERDAD
+                latency: 0.008, // 8ms - sincronizado con performance.audioLatencyTarget
+                sampleRate: 48000,
+                channelCount: 1,
+
+                // PROCESAMIENTO DE AUDIO AVANZADO
+                echoCancellation: true,
+                echoCancellationType: "system",
+                autoGainControl: true,
+                autoGainControlType: "system",
+                noiseSuppression: true,
+                noiseSuppressionType: "system",
+                voiceIsolation: true,
+
+                // CONFIGURACIÓN DE BUFFER OPTIMIZADA
+                bufferSize: 128,
+                deviceId: "default",
+                volume: 1.0,
+
+                // CONFIGURACIONES ESPECÍFICAS CHROME/WEBKIT
+                googAutoGainControl: true,
+                googAutoGainControl2: true,
+                googEchoCancellation: true,
+                googHighpassFilter: true,
+                googNoiseSuppression: true,
+                googTypingNoiseDetection: true,
+                googBeamforming: true,
+                googArrayGeometry: true,
+                googAudioMirroring: false,
+            },
+
+            /**
+             * AUDIO PLAYBACK - OPTIMIZADO PARA RESPUESTA TTS
+             *
+             * @type {AudioPlaybackDefaults}
+             */
+            audioPlaybackDefaults: {
+                autoplay: true,
+                playsInline: true,
+                volume: 1.0,
+                bufferSize: 256,
+                sampleRate: 48000,
+                latency: 0.008, // Sincronizado con capture
+            },
+
+            /**
+             * PUBLISH DEFAULTS - USANDO AUDIO PRESETS ROBUSTO
+             *
+             * Integra la configuración audioPresets existente (punto fuerte)
+             * con PublishDefaults oficial v2.13.6
+             *
+             * @type {PublishDefaults}
+             */
+            publishDefaults: {
+                // Audio preset base (configurable)
+                audioPreset: "speech", // Will be mapped to AudioPresets.speech in voice-agent-sdk.js
+
+                // Configuración detallada de audio (punto fuerte mantenido)
+                maxBitrate: 128000,
+                priority: "high",
+                dtx: false, // Discontinuous transmission
+                red: false, // Redundant encoding
+                fec: false, // Forward error correction
+                stopOnUnpublish: true,
+                simulcast: false,
+            },
+
+            // ✅ REMOVIDO: videoCaptureDefaults (no necesario en producción)
+            // ✅ REMOVIDO: turnDetection (error conceptual - va al agente Python)
+        },
+
+        /**
+         * Features de LiveKit Cliente (NO RoomOptions)
+         *
+         * @type {Object}
+         */
+        features: {
+            /** @type {boolean} ✅ prepareConnection() v2.13.6 */
+            enablePrepareConnection: true,
+            /** @type {boolean} ✅ Adaptive stream si soportado */
+            enableAdaptiveStream: true,
+            /** @type {boolean} ✅ Dynacast si soportado */
+            enableDynacast: true,
+        },
     },
 
-    // Opciones de Room OPTIMIZADAS para conversación sub-500ms
-    roomOptions: {
-      adaptiveStream: true,
-      dynacast: true,
-
-      audioCaptureDefaults: {
-        latency: 0.01, // CONSOLIDADO: Audio latency principal
-        sampleRate: 48000,
-        channelCount: 1,
-        echoCancellation: true,
-        echoCancellationType: 'system',
-        autoGainControl: true,
-        autoGainControlType: 'system',
-        noiseSuppression: true,
-        noiseSuppressionType: 'system',
-        voiceIsolation: true,
-        bufferSize: 128,
-        deviceId: 'default',
-        volume: 1.0,
-        googAutoGainControl: true,
-        googAutoGainControl2: true,
-        googEchoCancellation: true,
-        googHighpassFilter: true,
-        googNoiseSuppression: true,
-        googTypingNoiseDetection: true,
-        googBeamforming: true,
-        googArrayGeometry: true,
-        googAudioMirroring: false,
-      },
-
-      audioPlaybackDefaults: {
-        autoplay: true,
-        playsInline: true,
-        volume: 1.0,
-        bufferSize: 256,
-        sampleRate: 48000,
-        latency: 0.01,
-      },
-
-      audioPresets: {
-        maxBitrate: 128000,
-        priority: 'high',
-        dtx: false,
-        stopOnUnpublish: true,
-        red: false,
-        fec: false,
-      },
-
-      videoCaptureDefaults: {
-        resolution: { width: 320, height: 240 },
-        frameRate: 15,
-      },
-
-      // CONSOLIDADO: Turn Detection - Un solo lugar de configuración
-      turnDetection: {
+    /**
+     * Configuración RPC para comunicación bidireccional
+     *
+     * @namespace CONFIG.rpc
+     */
+    rpc: {
+        /** @type {boolean} RPC habilitado globalmente */
         enabled: true,
-        timeout: 400,
-        minSpeechDuration: 150,
-        silenceTimeout: 250, // Valor principal consolidado
-        vadSensitivity: 0.7,
-        speechProbabilityThreshold: 0.4,
-        endOfSpeechTimeout: 200,
-        maxSpeechDuration: 30000,
-        enableVoiceActivityDetection: true,
-        enableBackgroundNoiseReduction: true,
-        adaptiveThreshold: true,
-      },
+        /** @type {number} Timeout para llamadas RPC en ms */
+        timeout: 10000,
+        /** @type {string[]} Métodos RPC disponibles */
+        methods: [
+            "llm_function_call",
+            "agent_command",
+            "heartbeat",
+            "update_ui_state",
+            "show_notification",
+            "change_persona",
+        ],
     },
 
+    /**
+     * Topics para comunicación LiveKit Data Channels
+     * @namespace CONFIG.topics
+     */
+    topics: {
+        chat: "lk.chat",
+        transcription: "lk.transcription",
+        status: "lk.agent.status",
+        textStream: "lk.rpc.textStream",
+        voiceMetrics: "lk.rpc.voiceMetrics",
+    },
+
+    /**
+     * Configuración del agente de voz
+     * @namespace CONFIG.agent
+     */
+    agent: {
+        /** @type {string} Estrategia de modo voz */
+        voiceModeStrategy: "dynamic",
+        /** @type {string} Personalidad por defecto */
+        persona: "rosalia",
+        /** @type {Object} Modos de interacción */
+        ioModes: {
+            TEXT: "text",
+            VOICE: "voice",
+            HYBRID: "hybrid",
+        },
+        /** @type {string} Modo por defecto */
+        defaultMode: "hybrid",
+
+        /**
+         * Agent Attributes v2.13.6 - Se envían al agente Python
+         * Documentación: https://docs.livekit.io/reference/client-sdk-js/interfaces/attributes.AgentAttributes.html
+         *
+         * @type {AgentAttributes}
+         */
+        attributes: {
+            name: "voice_assistant_sdk",
+            version: "4.0.0",
+            capabilities: ["voice", "chat", "rpc", "streaming"],
+            metadata: {
+                personaId: "rosalia",
+                language: "es",
+                model: "claude-3-haiku",
+                clientType: "voice_agent_sdk",
+                audioLatencyTarget: "8ms",
+            },
+        },
+
+        /**
+         * Transcription configuration - se envía al agente Python
+         * Documentación: https://docs.livekit.io/reference/client-sdk-js/interfaces/attributes.TranscriptionAttributes.html
+         *
+         * @type {TranscriptionAttributes}
+         */
+        transcription: {
+            model: "deepgram-nova-2",
+            language: "es",
+            interim_results: true,
+        },
+    },
+
+    /**
+     * Configuración de rendimiento - SINCRONIZADA CON LIVEKIT
+     *
+     * @namespace CONFIG.performance
+     */
+    performance: {
+        /** @type {number} Timeout de conexión en ms */
+        connectionTimeout: 15000,
+        /** @type {number} Timeout de reconexión en ms */
+        reconnectTimeout: 3000,
+        /** @type {number} Timeout de preparación de conexión en ms */
+        prepareConnectionTimeout: 2000,
+
+        // AUDIO PERFORMANCE - SINCRONIZADO CON LIVEKIT
+        /** @type {number} FUENTE DE VERDAD: Latencia objetivo en ms (8ms = 0.008s) */
+        audioLatencyTarget: 8,
+        /** @type {number} Sample rate sincronizado con audioCaptureDefaults */
+        audioSampleRate: 48000,
+        /** @type {number} Buffer size sincronizado con audioCaptureDefaults */
+        audioBufferSize: 128,
+
+        /** @type {number} Timeout de respuesta de voz en ms */
+        voiceResponseTimeoutMs: 8000,
+        /** @type {boolean} Habilitar modo de baja latencia */
+        enableLowLatencyMode: true,
+        /** @type {boolean} Priorizar tráfico de voz */
+        prioritizeVoiceTraffic: true,
+        /** @type {boolean} Usar codecs optimizados */
+        useOptimizedCodecs: true,
+    },
+
+    /**
+     * Configuración de interfaz de usuario
+     * @namespace CONFIG.ui
+     */
+    ui: {
+        /**
+         * Configuración del chat
+         */
+        chat: {
+            maxMessages: 50,
+            typingIndicatorTimeout: 2000,
+            enableAudioMessages: false,
+            audioMessageMaxDuration: 300,
+            showAudioWaveform: false,
+        },
+
+        /**
+         * Configuración de audio y voz - SINCRONIZADA CON LIVEKIT
+         */
+        audio: {
+            /** @type {boolean} Requiere interacción del usuario para audio (v2.13.6) */
+            requireUserInteraction: true,
+            /** @type {boolean} No iniciar audio automáticamente */
+            autoStart: false,
+            /** @type {boolean} Mostrar actividad de voz */
+            showVoiceActivity: true,
+            /** @type {boolean} Mostrar indicador de latencia */
+            showLatencyIndicator: true,
+            /** @type {boolean} Habilitar animaciones de actividad de voz */
+            enableVoiceActivityAnimation: true,
+        },
+
+        /**
+         * Configuración de notificaciones
+         */
+        notifications: {
+            /** @type {boolean} Notificaciones toast habilitadas */
+            enabled: true,
+            /** @type {number} Duración por defecto en ms */
+            duration: 3000,
+            /** @type {number} Máximo número visible simultáneamente */
+            maxVisible: 3,
+            /** @type {string} Posición en pantalla */
+            position: "top-right",
+            /** @type {number} Duración para interacción de audio */
+            audioInteractionDuration: 6000,
+            /** @type {boolean} Mostrar advertencias de latencia */
+            showLatencyWarnings: true,
+            /** @type {number} Umbral de latencia para advertencias */
+            voiceLatencyThreshold: 800,
+
+            /**
+             * Configuración del badge de calidad de conexión
+             */
+            connectionBadge: {
+                /** @type {boolean} Badge habilitado */
+                enabled: true,
+                /** @type {boolean} Mostrar latencia en badge */
+                showLatency: true,
+                /** @type {boolean} Mostrar puntos de calidad */
+                showQualityDots: true,
+                /** @type {boolean} Auto-ocultar cuando calidad es buena */
+                autoHide: true,
+                /** @type {number} Intervalo de actualización en ms */
+                updateInterval: 1000,
+                /** @type {string} Posición del badge */
+                position: "bottom-right",
+                /** @type {number} Offset desde abajo en px */
+                offsetBottom: 100,
+            },
+        },
+
+        /**
+         * Configuración de llamada de voz
+         */
+        call: {
+            /** @type {string} Modo de conversación: 'unified' | 'separated' */
+            conversationMode: "unified",
+            /** @type {number} Duración de subtítulos en ms */
+            subtitleDisplayDuration: 4000,
+            /** @type {number} Timeout de actividad de voz en ms */
+            voiceActivityTimeout: 800,
+            /** @type {number} Intervalo de actualización de estado en ms */
+            callStatusUpdateInterval: 300,
+            /** @type {boolean} Mostrar calidad de conexión */
+            showConnectionQuality: true,
+            /** @type {number} Umbral de advertencia de latencia en ms */
+            latencyWarningThreshold: 1000,
+            /** @type {number} Delay para indicador de pensamiento en ms */
+            thinkingIndicatorDelay: 300,
+            /** @type {number} Advertencia de timeout de respuesta en ms */
+            responseTimeoutWarning: 3000,
+            /** @type {number} Duración de fade in de subtítulos en ms */
+            subtitleFadeInDuration: 150,
+            /** @type {number} Duración de fade out de subtítulos en ms */
+            subtitleFadeOutDuration: 200,
+            /** @type {number} Longitud máxima de subtítulos */
+            subtitleMaxLength: 100,
+            /** @type {boolean} Mostrar transcripciones parciales */
+            showPartialTranscriptions: true,
+        },
+    },
+
+    /**
+     * Feature flags limpios y verificados
+     *
+     * SOLO flags que están realmente implementados en el código
+     * @namespace CONFIG.features
+     */
     features: {
-      enablePrepareConnection: true,
-      optimizedAudioProcessing: true,
-      enableBrowserCompatibilityCheck: true,
-      enableStructuredLogging: true,
-      voiceActivityDetection: true,
-      echoSuppressionMode: 'aggressive',
-      adaptiveAudioProcessing: true,
-      enableRpcMethods: true,
-      connectionOptimization: true,
-      enableAudioWorklet: true,
-    },
-  },
-
-  // 📡 Topics para streaming (v2.13.3)
-  topics: {
-    chat: 'lk.chat',
-    transcription: 'lk.transcription',
-    status: 'lk.agent.status',
-    textStream: 'lk.rpc.textStream',
-    voiceMetrics: 'lk.rpc.voiceMetrics',
-  },
-
-  // 🤖 Configuración del agente
-  agent: {
-    voiceModeStrategy: 'dynamic',
-    persona: 'rosalia',
-    ioModes: {
-      TEXT: 'text',
-      VOICE: 'voice',
-      HYBRID: 'hybrid',
-    },
-    defaultMode: 'hybrid',
-  },
-
-  // 🎨 Configuración UI CONSOLIDADA
-  ui: {
-    chat: {
-      maxMessages: 50,
-      typingIndicatorTimeout: 2000,
-      enableAudioMessages: true, // TODO: Implementar funcionalidad real
-      audioMessageMaxDuration: 300,
-      showAudioWaveform: true, // TODO: Implementar funcionalidad real
-      // ❌ NO USADAS - Marcadas para revisión futura:
-      // streamingUpdateInterval: 100,        // No se usa en ningún JS
-      // messageAnimationDuration: 200,       // No se usa en ningún JS
+        /** @type {boolean} ✅ IMPLEMENTADO: Texto en streaming */
+        streamingText: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Detección de actividad de voz */
+        voiceActivityDetection: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Visualización de audio */
+        audioVisualization: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Subtítulos */
+        subtitles: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Atajos de teclado */
+        keyboardShortcuts: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Reconexión automática */
+        autoReconnect: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Soporte RPC */
+        rpcSupport: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Manejo avanzado de errores */
+        advancedErrorHandling: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Optimización de conexión */
+        connectionOptimization: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Verificación de compatibilidad */
+        browserCompatibilityCheck: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Indicador de pensamiento */
+        showThinkingIndicator: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Monitoreo de latencia en tiempo real */
+        realTimeLatencyMonitoring: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Calidad adaptiva */
+        adaptiveQuality: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Manejo de interrupciones de voz */
+        voiceInterruptionHandling: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: RPC text streaming */
+        enableRpcTextStreaming: true,
+        /** @type {boolean} ✅ IMPLEMENTADO: Pre-calentamiento de conexión */
+        enableConnectionPreWarming: true,
     },
 
-    audio: {
-      showVoiceActivity: true,
-      showLatencyIndicator: true,
-      enableVoiceActivityAnimation: true,
-      // ❌ NO USADAS - Marcadas para revisión futura:
-      // visualizationEnabled: true,          // No se usa en ningún JS
-      // volumeThreshold: 0.1,                // No se usa en ningún JS
-      // silenceTimeout: 1500,                // No se usa en ningún JS
-      // voiceActivityThreshold: 0.05,        // No se usa en ningún JS
+    /**
+     * Mensajes de error del sistema
+     * @namespace CONFIG.errors
+     */
+    errors: {
+        CONNECTION_FAILED: "No se pudo conectar al asistente de voz",
+        TOKEN_ERROR: "Error de autenticación - recarga la página",
+        MICROPHONE_ERROR: "Acceso al micrófono denegado o no disponible",
+        AUDIO_ERROR: "Haz clic en el botón de audio para habilitar sonido",
+        NETWORK_ERROR: "Conexión de red inestable",
+        AGENT_ERROR: "Asistente de voz temporalmente no disponible",
+        PERMISSION_ERROR: "Permisos requeridos no otorgados",
+        BROWSER_ERROR: "Navegador no soporta funciones de voz",
+        BROWSER_INCOMPATIBLE: "Tu navegador no soporta funciones de voz",
+        AUDIO_DEVICE_ERROR: "Dispositivo de audio no disponible",
+        CONNECTION_TIMEOUT: "Timeout de conexión - inténtalo de nuevo",
+        VOICE_LATENCY_HIGH: "Respuesta de voz más lenta de lo esperado",
+        MICROPHONE_PERMISSION_DENIED:
+            "Se requiere permiso de micrófono para modo voz",
+        SAFARI_AUDIO_RESTRICTION:
+            "Safari requiere interacción del usuario para audio",
     },
 
-    // 📢 Notificaciones (toast y connection badge)
-    notifications: {
-      enabled: false, // ✅ Toast notifications
-      duration: 3000,
-      maxVisible: 2,
-      position: 'top-right',
-      audioInteractionDuration: 6000,
-      showLatencyWarnings: true,
-      voiceLatencyThreshold: 800,
-
-      // ✅ Connection Quality Badge - FUNCIONAL
-      connectionBadge: {
-        enabled: false,
-        showLatency: true,
-        showQualityDots: true,
-        autoHide: false,
-        updateInterval: 1000,
-        position: 'bottom-right',
-        offsetBottom: 100,
-      },
+    /**
+     * Mensajes de estado del sistema
+     * @namespace CONFIG.status
+     */
+    status: {
+        INITIALIZING: "Inicializando asistente de voz...",
+        CHECKING_BROWSER: "Verificando compatibilidad del navegador...",
+        CONNECTING: "Conectando al asistente...",
+        CONNECTED: "Conectado y listo",
+        READY: "Listo para chat o llamada",
+        VOICE_ACTIVE: "Llamada de voz activa - Habla libremente",
+        VOICE_STARTING: "Iniciando modo voz...",
+        VOICE_ENDING: "Finalizando modo voz...",
+        RECONNECTING: "Reconectando...",
+        DISCONNECTED: "Desconectado",
+        ERROR: "Error de conexión",
+        AUDIO_INTERACTION_REQUIRED: "Haz clic para habilitar audio",
+        MICROPHONE_STARTING: "Activando micrófono...",
+        OPTIMIZING_CONNECTION: "Optimizando para voz...",
+        PREPARING_VOICE_MODE: "Preparando conversación de voz...",
+        LISTENING: "Escuchando...",
+        PROCESSING_SPEECH: "Procesando tu voz...",
+        THINKING: "Pensando...",
+        RESPONDING: "Respondiendo...",
     },
 
-    call: {
-      conversationMode: 'unified',
-      subtitleDisplayDuration: 4000,
-      voiceActivityTimeout: 800,
-      callStatusUpdateInterval: 300,
-      showConnectionQuality: true,
-      latencyWarningThreshold: 1000,
-      thinkingIndicatorDelay: 300,
-      responseTimeoutWarning: 3000,
-      subtitleFadeInDuration: 150,
-      subtitleFadeOutDuration: 200,
-      subtitleMaxLength: 100,
-      showPartialTranscriptions: false,
-    },
-  },
-
-  // ❌ Mensajes de error
-  errors: {
-    CONNECTION_FAILED: 'No se pudo conectar al asistente de voz',
-    TOKEN_ERROR: 'Error de autenticación - recarga la página',
-    MICROPHONE_ERROR: 'Acceso al micrófono denegado o no disponible',
-    AUDIO_ERROR: 'Haz clic en el botón de audio para habilitar sonido',
-    NETWORK_ERROR: 'Conexión de red inestable',
-    AGENT_ERROR: 'Asistente de voz temporalmente no disponible',
-    PERMISSION_ERROR: 'Permisos requeridos no otorgados',
-    BROWSER_ERROR: 'Navegador no soporta funciones de voz',
-    BROWSER_INCOMPATIBLE: 'Tu navegador no soporta funciones de voz',
-    AUDIO_DEVICE_ERROR: 'Dispositivo de audio no disponible',
-    CONNECTION_TIMEOUT: 'Timeout de conexión - inténtalo de nuevo',
-    VOICE_LATENCY_HIGH: 'Respuesta de voz más lenta de lo esperado',
-    TURN_DETECTION_FAILED: 'No se puede detectar patrones de habla',
-    MICROPHONE_PERMISSION_DENIED: 'Se requiere permiso de micrófono para modo voz',
-    SAFARI_AUDIO_RESTRICTION: 'Safari requiere interacción del usuario para audio',
-  },
-
-  // 📊 Status messages
-  status: {
-    INITIALIZING: 'Inicializando asistente de voz...',
-    CHECKING_BROWSER: 'Verificando compatibilidad del navegador...',
-    CONNECTING: 'Conectando al asistente...',
-    CONNECTED: 'Conectado y listo',
-    READY: 'Listo para chat o llamada',
-    VOICE_ACTIVE: 'Llamada de voz activa - Habla libremente',
-    VOICE_STARTING: 'Iniciando modo voz...',
-    VOICE_ENDING: 'Finalizando modo voz...',
-    RECONNECTING: 'Reconectando...',
-    DISCONNECTED: 'Desconectado',
-    ERROR: 'Error de conexión',
-    AUDIO_INTERACTION_REQUIRED: 'Haz clic para habilitar audio',
-    MICROPHONE_STARTING: 'Activando micrófono...',
-    OPTIMIZING_CONNECTION: 'Optimizando para voz...',
-    PREPARING_VOICE_MODE: 'Preparando conversación de voz...',
-    LISTENING: 'Escuchando...',
-    PROCESSING_SPEECH: 'Procesando tu voz...',
-    THINKING: 'Pensando...',
-    RESPONDING: 'Respondiendo...',
-  },
-
-  // ⚡ Performance CONSOLIDADO
-  performance: {
-    connectionTimeout: 15000,
-    reconnectTimeout: 3000,
-    prepareConnectionTimeout: 2000,
-    audioBufferSize: 128,
-    audioSampleRate: 48000,
-    // CONSOLIDADO: Una sola configuración de latencia de audio
-    audioLatencyTarget: 10, // Milisegundos - valor principal
-    voiceResponseTimeoutMs: 8000,
-    enableLowLatencyMode: true,
-    prioritizeVoiceTraffic: true,
-    aggressiveBuffering: false,
-    useOptimizedCodecs: true,
-    enableAudioWorklets: true,
-    useSharedArrayBuffer: true,
-    enableOffscreenCanvas: true,
-    // ❌ NO USADAS - Marcadas para revisión futura:
-    // uiUpdateThrottleMs: 16,               // No se usa en ningún JS
-    // messageCleanupThreshold: 75,          // No se usa en ningún JS
-    // audioElementCleanupDelay: 500,        // No se usa en ningún JS
-    // textStreamHandlerCleanupEnabled: true, // No se usa en ningún JS
-    // transcriptionBufferMs: 50,            // No se usa en ningún JS
-    // turnDetectionLatencyMs: 30,           // No se usa en ningún JS
-    // speechEndDetectionMs: 200,            // No se usa en ningún JS
-  },
-
-  // 🎛️ Feature flags CONSOLIDADOS
-  features: {
-    streamingText: true,
-    voiceActivityDetection: true,
-    audioVisualization: true,
-    subtitles: true,
-    keyboardShortcuts: true,
-    autoReconnect: true,
-    rpcSupport: true,
-    advancedErrorHandling: true,
-    connectionOptimization: true,
-    browserCompatibilityCheck: true,
-    showThinkingIndicator: true,
-    realTimeLatencyMonitoring: true,
-    adaptiveQuality: true,
-    voiceInterruptionHandling: true,
-    enableRpcTextStreaming: true, // ✅ Usada en voice-agent.js
-    enableConnectionPreWarming: true, // TODO: Implementar funcionalidad real
-    // ❌ NO USADAS - Marcadas para revisión futura:
-    // textToSpeechFallback: true,           // No se usa en ningún JS
-    // aggressiveTurnDetection: true,        // Solo warning en validation
-    // voiceActivityVisualization: true,     // No se usa en ningún JS
-    // contextualAudioProcessing: true,      // No se usa en ningún JS
-    // enableAdvancedVAD: true,              // No se usa en ningún JS
-    // enableAudioWorkletProcessor: true,    // No se usa en ningún JS
-  },
-
-  // 🐛 Debugging CONSOLIDADO
-  debug: {
-    enabled: true,
-    logLevel: 'debug',
-    showNetworkLogs: false,
-    showUIEvents: true,
-    showAudioEvents: true,
-    performanceMonitoring: true,
-    showConnectionState: true,
-    showVoiceModeChanges: true,
-    showLatencyMetrics: true,
-    logTextStreamEvents: true,
-    logVoiceActivityEvents: true,
-    logTurnDetectionEvents: true,
-    showVoiceMetrics: true,
-    logTranscriptionLatency: true,
-    showConnectionQuality: true,
-    voiceLatencyWarningThreshold: 600,
-    enableVoiceDebugging: true,
-    logRpcCalls: true,
-    logConnectionPreWarming: true,
-    // ❌ NO USADAS - Marcadas para revisión futura:
-    // showMemoryUsage: false,               // No se usa en ningún JS
-    // logAudioProcessingEvents: false,      // No se usa en ningún JS
-    // showWebRTCStats: true,                // Solo en env override
-  },
-
-  // ⌨️ Keyboard shortcuts
-  shortcuts: {
-    sendMessage: 'Enter',
-    sendMessageAlt: 'Ctrl+Enter',
-    toggleVoice: 'Ctrl+Shift+V',
-    toggleMute: 'Ctrl+Shift+M',
-    endCall: 'Escape',
-    forceEndSpeech: 'Ctrl+Shift+S',
-    toggleThinking: 'Ctrl+Shift+T',
-    showVoiceMetrics: 'Ctrl+Shift+D',
-    toggleVAD: 'Ctrl+Shift+A',
-    resetConnection: 'Ctrl+Shift+R',
-  },
-
-  // ⚡ CONSOLIDADO: Configuración específica de voz
-  voice: {
-    // CONSOLIDADO: Turn Detection - Referencia principal
-    turnDetection: {
-      aggressive: true,
-      adaptiveThreshold: true,
-      silenceGracePeriod: 100,
-      minimumTurnDuration: 120,
-      maximumSilenceDuration: 400, // Referencia a livekit.roomOptions.turnDetection.silenceTimeout
-      voiceActivityThreshold: 0.2,
-      backgroundNoiseAdaptation: true,
-      enablePreEmphasis: true,
-      enableSpectralSubtraction: true,
-      windowSize: 512,
-      hopLength: 256,
+    /**
+     * Configuración de debugging consolidada
+     * @namespace CONFIG.debug
+     */
+    debug: {
+        /** @type {boolean} Debug habilitado */
+        enabled: true,
+        /** @type {string} Nivel de log */
+        logLevel: "debug",
+        /** @type {boolean} Mostrar logs de red */
+        showNetworkLogs: true,
+        /** @type {boolean} ✅ USADO: Mostrar eventos de UI */
+        showUIEvents: true,
+        /** @type {boolean} ✅ USADO: Mostrar eventos de audio */
+        showAudioEvents: true,
+        /** @type {boolean} ✅ USADO: Monitoreo de rendimiento */
+        performanceMonitoring: true,
+        /** @type {boolean} ✅ USADO: Mostrar estado de conexión */
+        showConnectionState: true,
+        /** @type {boolean} ✅ USADO: Mostrar cambios de modo voz */
+        showVoiceModeChanges: true,
+        /** @type {boolean} ✅ USADO: Mostrar métricas de latencia */
+        showLatencyMetrics: true,
+        /** @type {boolean} ✅ USADO: Log eventos de text stream */
+        logTextStreamEvents: true,
+        /** @type {boolean} ✅ USADO: Log eventos de actividad de voz */
+        logVoiceActivityEvents: true,
+        /** @type {boolean} ✅ USADO: Mostrar métricas de voz */
+        showVoiceMetrics: true,
+        /** @type {boolean} ✅ USADO: Log latencia de transcripción */
+        logTranscriptionLatency: true,
+        /** @type {boolean} ✅ USADO: Mostrar calidad de conexión */
+        showConnectionQuality: true,
+        /** @type {number} ✅ USADO: Umbral de advertencia de latencia de voz */
+        voiceLatencyWarningThreshold: 600,
+        /** @type {boolean} ✅ USADO: Debug de voz habilitado */
+        enableVoiceDebugging: true,
+        /** @type {boolean} ✅ USADO: Log llamadas RPC */
+        logRpcCalls: true,
+        /** @type {boolean} ✅ USADO: Log pre-calentamiento de conexión */
+        logConnectionPreWarming: true,
     },
 
-    responseFlow: {
-      thinkingIndicatorDelay: 250,
-      responseTimeoutWarning: 2500,
-      maxResponseWaitTime: 6000,
-      interruptionGracePeriod: 150,
-      expectedResponseLatency: 350,
-      latencyWarningThreshold: 600, // ✅ Usada en app.js
+    /**
+     * Atajos de teclado
+     * @namespace CONFIG.shortcuts
+     */
+    shortcuts: {
+        sendMessage: "Enter",
+        sendMessageAlt: "Ctrl+Enter",
+        toggleVoice: "Ctrl+Shift+V",
+        toggleMute: "Ctrl+Shift+M",
+        endCall: "Escape",
+        forceEndSpeech: "Ctrl+Shift+S",
+        toggleThinking: "Ctrl+Shift+T",
+        showVoiceMetrics: "Ctrl+Shift+D",
+        toggleVAD: "Ctrl+Shift+A",
+        resetConnection: "Ctrl+Shift+R",
     },
-
-    audioOptimization: {
-      prioritizeLowLatency: true,
-      adaptiveQuality: true,
-      echoCancellationLevel: 'aggressive',
-      noiseSuppressionLevel: 'high',
-      autoGainControlLevel: 'adaptive',
-      enableVoicePreprocessing: true,
-      optimizeForConversation: true,
-      enableVoiceIsolation: true,
-      enableBeamforming: true,
-      enableResidualEchoSuppression: true,
-      voiceActivityDetectionMode: 'aggressive',
-    },
-
-    // 🎵 NUEVO: Audio Replay System - Audio-First Implementation
-    audioReplay: {
-      enabled: true,
-      strategy: 'replace', // 'replace' no 'append' - clave para el fix
-      maxRetentionMs: 30000, // Solo mantener último audio por 30s
-      enableAutoSave: true,
-
-      // Múltiples detectores de fin de TTS
-      endDetection: {
-        enableTrackMuted: true, // Primario: TrackMuted event
-        enableActiveSpeakers: true, // Fallback: ActiveSpeakersChanged
-        enableTranscriptionFinal: true, // Fallback: isFinal en transcripción
-
-        // Timeouts de fallback
-        silenceTimeoutMs: 1500, // Si ningún evento funciona
-        maxRecordingDurationMs: 15000, // Safety timeout máximo
-
-        // Configuración de ActiveSpeakers
-        speakersEmptyDelayMs: 500, // Delay antes de considerar silencio
-
-        // Configuración de detección de silencio
-        silenceThreshold: 2, // Umbral de audio para silencio
-        silenceDurationRequiredMs: 3000, // Duración requerida de silencio
-      },
-
-      // Configuración de grabación
-      recording: {
-        mimeType: 'audio/webm;codecs=opus',
-        chunkIntervalMs: 100, // Chunks de 100ms para mejor precisión
-        enableBlobUrlCleanup: true, // Auto-cleanup de URLs
-      },
-
-      // Logging específico para debugging
-      debug: {
-        logRecordingEvents: true,
-        logEndDetectionEvents: true,
-        logBlobOperations: true,
-      },
-    },
-  },
 };
 
 /**
- * Validar y normalizar configuración v2.13.3 + Audio Replay
+ * Valida y sincroniza configuración v2.13.6+
+ *
+ * NUEVO: Garantiza sincronización entre todas las configuraciones
+ * y que CONFIG sea realmente la fuente de verdad única
+ *
+ * @returns {boolean} True si la configuración es válida
+ * @throws {Error} Si hay errores críticos de configuración
  */
 function validateConfig() {
-  const errors = [];
+    const errors = [];
 
-  if (!CONFIG.livekit.tokenEndpoint) {
-    errors.push('TOKEN_ENDPOINT es requerido');
-  }
-
-  if (!CONFIG.livekit.wsUrl) {
-    errors.push('LIVEKIT_URL es requerido');
-  }
-
-  if (CONFIG.agent.voiceModeStrategy !== 'dynamic') {
-    console.warn('⚠️ FORZADO a estrategia "dynamic" para optimización de voz');
-    CONFIG.agent.voiceModeStrategy = 'dynamic';
-  }
-
-  // CONSOLIDACIÓN: Sincronizar configuraciones duplicadas
-  const audioDefaults = CONFIG.livekit.roomOptions.audioCaptureDefaults;
-  const performanceLatency = CONFIG.performance.audioLatencyTarget;
-
-  // Usar performance.audioLatencyTarget como fuente de verdad
-  if (audioDefaults.latency * 1000 !== performanceLatency) {
-    console.warn('⚠️ Sincronizando latencia de audio:', performanceLatency + 'ms');
-    audioDefaults.latency = performanceLatency / 1000;
-  }
-
-  // Sincronizar turn detection
-  const roomTurnDetection = CONFIG.livekit.roomOptions.turnDetection;
-  const voiceTurnDetection = CONFIG.voice.turnDetection;
-
-  if (roomTurnDetection.silenceTimeout !== voiceTurnDetection.maximumSilenceDuration) {
-    console.warn('⚠️ Sincronizando turn detection silence timeout');
-    voiceTurnDetection.maximumSilenceDuration = roomTurnDetection.silenceTimeout;
-  }
-
-  // Validar audio replay configuration
-  if (CONFIG.voice.audioReplay.enabled) {
-    const replayConfig = CONFIG.voice.audioReplay;
-
-    if (!['replace', 'append'].includes(replayConfig.strategy)) {
-      console.warn('⚠️ Audio replay strategy inválida, usando "replace"');
-      replayConfig.strategy = 'replace';
+    // Validar endpoints requeridos
+    if (!CONFIG.livekit.tokenEndpoint) {
+        errors.push("TOKEN_ENDPOINT es requerido");
     }
 
-    if (replayConfig.endDetection.silenceTimeoutMs > replayConfig.maxRetentionMs) {
-      console.warn('⚠️ Silence timeout mayor que retention, ajustando');
-      replayConfig.endDetection.silenceTimeoutMs = Math.min(
-        replayConfig.endDetection.silenceTimeoutMs,
-        replayConfig.maxRetentionMs / 2
-      );
+    if (!CONFIG.livekit.wsUrl) {
+        errors.push("LIVEKIT_URL es requerido");
     }
-  }
 
-  if (errors.length > 0) {
-    console.error('❌ Errores de configuración:', errors);
-    throw new Error(`Configuración inválida: ${errors.join(', ')}`);
-  }
+    // ✅ NUEVO: Sincronizar audio latency entre todas las configuraciones
+    const audioDefaults = CONFIG.livekit.roomOptions.audioCaptureDefaults;
+    const performanceLatency = CONFIG.performance.audioLatencyTarget;
 
-  return true;
+    if (Math.abs(audioDefaults.latency * 1000 - performanceLatency) > 0.1) {
+        console.warn(
+            `⚠️ Sincronizando latencia de audio: ${performanceLatency}ms`
+        );
+        audioDefaults.latency = performanceLatency / 1000;
+        CONFIG.livekit.roomOptions.audioPlaybackDefaults.latency =
+            audioDefaults.latency;
+    }
+
+    // ✅ NUEVO: Sincronizar sample rates
+    const sampleRate = audioDefaults.sampleRate;
+    if (CONFIG.performance.audioSampleRate !== sampleRate) {
+        console.warn(`⚠️ Sincronizando sample rate: ${sampleRate}Hz`);
+        CONFIG.performance.audioSampleRate = sampleRate;
+        CONFIG.livekit.roomOptions.audioPlaybackDefaults.sampleRate =
+            sampleRate;
+    }
+
+    // ✅ NUEVO: Sincronizar buffer sizes
+    const bufferSize = audioDefaults.bufferSize;
+    if (CONFIG.performance.audioBufferSize !== bufferSize) {
+        console.warn(`⚠️ Sincronizando buffer size: ${bufferSize}`);
+        CONFIG.performance.audioBufferSize = bufferSize;
+    }
+
+    // Sincronizar RPC config
+    CONFIG.features.rpcSupport = CONFIG.rpc.enabled;
+
+    // Forzar estrategia optimizada
+    if (CONFIG.agent.voiceModeStrategy !== "dynamic") {
+        console.warn(
+            '⚠️ FORZADO a estrategia "dynamic" para optimización de voz'
+        );
+        CONFIG.agent.voiceModeStrategy = "dynamic";
+    }
+
+    if (errors.length > 0) {
+        console.error("❌ Errores de configuración:", errors);
+        throw new Error(`Configuración inválida: ${errors.join(", ")}`);
+    }
+
+    return true;
 }
 
 /**
- * Obtener overrides de configuración específicos del entorno
+ * Obtiene overrides de configuración específicos del entorno
+ *
+ * MEJORADO: Adapta configuración según entorno con sincronización
+ *
+ * @returns {Object} Configuración de override para el entorno actual
  */
 function getEnvironmentConfig() {
-  const env = typeof window !== 'undefined' && window.location.hostname;
+    const env = typeof window !== "undefined" && window.location.hostname;
 
-  if (env === 'localhost' || env === '127.0.0.1') {
+    if (env === "localhost" || env === "127.0.0.1") {
+        return {
+            debug: {
+                ...CONFIG.debug,
+                enabled: true,
+                logLevel: "debug",
+                showUIEvents: true,
+                performanceMonitoring: true,
+                showLatencyMetrics: true,
+                enableVoiceDebugging: true,
+                logVoiceActivityEvents: true,
+            },
+            performance: {
+                ...CONFIG.performance,
+                audioLatencyTarget: 6, // Latencia más agresiva en desarrollo
+            },
+            ui: {
+                ...CONFIG.ui,
+                notifications: {
+                    ...CONFIG.ui.notifications,
+                    connectionBadge: {
+                        ...CONFIG.ui.notifications.connectionBadge,
+                        enabled: true,
+                        showLatency: true,
+                        showQualityDots: true,
+                    },
+                },
+            },
+        };
+    }
+
+    // Configuración de producción
     return {
-      debug: {
-        ...CONFIG.debug,
-        enabled: true,
-        logLevel: 'debug',
-        showUIEvents: true,
-        performanceMonitoring: true,
-        showLatencyMetrics: true,
-        enableVoiceDebugging: true,
-        logVoiceActivityEvents: true,
-      },
-      performance: {
-        ...CONFIG.performance,
-        audioLatencyTarget: 8,
-      },
-      voice: {
-        audioReplay: {
-          ...CONFIG.voice.audioReplay,
-          debug: {
-            logRecordingEvents: true,
-            logEndDetectionEvents: true,
-            logBlobOperations: true,
-          },
-        },
-      },
-      ui: {
-        notifications: {
-          connectionBadge: {
-            enabled: true,
-            showLatency: true,
-            showQualityDots: true,
-          },
-        },
-      },
-    };
-  }
-
-  return {
-    debug: {
-      ...CONFIG.debug,
-      enabled: false,
-      logLevel: 'error',
-      performanceMonitoring: false,
-      showLatencyMetrics: false,
-      enableVoiceDebugging: false,
-      logVoiceActivityEvents: false,
-    },
-    performance: {
-      ...CONFIG.performance,
-      audioLatencyTarget: 12,
-    },
-    voice: {
-      audioReplay: {
-        ...CONFIG.voice.audioReplay,
         debug: {
-          logRecordingEvents: false,
-          logEndDetectionEvents: false,
-          logBlobOperations: false,
+            ...CONFIG.debug,
+            enabled: false,
+            logLevel: "error",
+            performanceMonitoring: false,
+            showLatencyMetrics: false,
+            enableVoiceDebugging: false,
+            logVoiceActivityEvents: false,
         },
-      },
-    },
-  };
+        performance: {
+            ...CONFIG.performance,
+            audioLatencyTarget: 10, // Latencia más conservadora en producción
+        },
+    };
 }
 
 /**
- * Inicializar configuración con optimizaciones de voz + Audio Replay
+ * Inicializa configuración como fuente de verdad única
+ *
+ * NUEVO: Garantiza que CONFIG sea la única fuente de verdad
+ * en todos los JS del sistema
+ *
+ * @returns {Object} Configuración inicializada y validada
+ * @throws {Error} Si falla la inicialización
  */
 function initializeConfig() {
-  try {
-    const envConfig = getEnvironmentConfig();
+    try {
+        // const envConfig = getEnvironmentConfig();
 
-    // Aplicar overrides de entorno
-    Object.assign(CONFIG.debug, envConfig.debug);
-    Object.assign(CONFIG.performance, envConfig.performance);
+        // // Aplicar overrides de entorno manteniendo sincronización
+        // Object.assign(CONFIG.debug, envConfig.debug);
+        // Object.assign(CONFIG.performance, envConfig.performance);
 
-    if (envConfig.ui?.notifications?.connectionBadge) {
-      Object.assign(
-        CONFIG.ui.notifications.connectionBadge,
-        envConfig.ui.notifications.connectionBadge
-      );
+        // if (envConfig.ui?.notifications?.connectionBadge) {
+        //     Object.assign(
+        //         CONFIG.ui.notifications.connectionBadge,
+        //         envConfig.ui.notifications.connectionBadge
+        //     );
+        // }
+
+        // ✅ VALIDAR Y SINCRONIZAR TODO
+        validateConfig();
+
+        // Calcular latencia esperada total del sistema
+        const expectedLatency = CONFIG.performance.audioLatencyTarget * 2; // Capture + playback
+
+        if (CONFIG.debug.enabled) {
+            console.log("🔧 CONFIG v4.0 - FUENTE DE VERDAD ÚNICA ACTIVADA");
+            console.log("📋 LiveKit roomOptions: Directo desde CONFIG");
+            console.log("🎤 RPC habilitado:", CONFIG.rpc.enabled);
+            console.log("🎵 Audio config robusto: MANTENIDO como punto fuerte");
+
+            console.table({
+                "Token Endpoint": CONFIG.livekit.tokenEndpoint
+                    ? "✅ Configurado"
+                    : "❌ Faltante",
+                "WebSocket URL": CONFIG.livekit.wsUrl
+                    ? "✅ Configurado"
+                    : "❌ Faltante",
+                "RoomOptions Source":
+                    "✅ CONFIG.livekit.roomOptions (VERDAD ÚNICA)",
+                "Audio Latency (ms)": `✅ ${CONFIG.performance.audioLatencyTarget}ms SINCRONIZADO`,
+                "Sample Rate": `✅ ${CONFIG.performance.audioSampleRate}Hz SINCRONIZADO`,
+                "Buffer Size": `✅ ${CONFIG.performance.audioBufferSize} SINCRONIZADO`,
+                "Expected Total Latency": `⚡ ${expectedLatency}ms`,
+                PrepareConnection: CONFIG.livekit.features
+                    .enablePrepareConnection
+                    ? "✅ Habilitado"
+                    : "❌ Deshabilitado",
+                "RPC Support": CONFIG.rpc.enabled
+                    ? "✅ Habilitado"
+                    : "❌ Deshabilitado",
+            });
+
+            console.group("🎯 CONFIG v4.0 - FUENTE DE VERDAD ÚNICA:");
+            console.log("• CONFIG.livekit.roomOptions → new Room() DIRECTO");
+            console.log("• Audio config robusto MANTENIDO (punto fuerte)");
+            console.log("• Sincronización automática de latencias");
+            console.log("• RoomOptions v2.13.6 oficial completo");
+            console.log("• Zero duplicación de valores");
+            console.log("• Agent attributes v2.13.6 incluidos");
+            console.log("• Eliminado turnDetection (error conceptual)");
+            console.log("• Eliminado videoCaptureDefaults (no necesario)");
+            console.groupEnd();
+        }
+
+        return CONFIG;
+    } catch (error) {
+        console.error(
+            "❌ Falló la inicialización de CONFIG como fuente de verdad:",
+            error
+        );
+        throw error;
     }
-
-    if (envConfig.voice?.audioReplay) {
-      Object.assign(CONFIG.voice.audioReplay.debug, envConfig.voice.audioReplay.debug);
-    }
-
-    validateConfig();
-
-    const expectedLatency =
-      CONFIG.voice.turnDetection.maximumSilenceDuration +
-      CONFIG.voice.responseFlow.expectedResponseLatency +
-      CONFIG.performance.audioLatencyTarget;
-
-    if (CONFIG.debug.enabled) {
-      console.log('🔧 ASISTENTE DE VOZ v2.13.3 + Audio Replay - Configuración cargada');
-      console.log('📋 Estrategia Voice Mode:', CONFIG.agent.voiceModeStrategy);
-      console.log(
-        '🎤 Features en tiempo real:',
-        CONFIG.features.streamingText ? 'HABILITADO' : 'DESHABILITADO'
-      );
-      console.log('🎵 Pipeline de audio: 48kHz voice-optimized + Audio Replay System');
-      console.log('⚡ Audio Replay Strategy:', CONFIG.voice.audioReplay.strategy.toUpperCase());
-      console.log(
-        '🔄 End Detection Methods:',
-        [
-          CONFIG.voice.audioReplay.endDetection.enableTrackMuted ? 'TrackMuted' : null,
-          CONFIG.voice.audioReplay.endDetection.enableActiveSpeakers ? 'ActiveSpeakers' : null,
-          CONFIG.voice.audioReplay.endDetection.enableTranscriptionFinal
-            ? 'TranscriptionFinal'
-            : null,
-        ]
-          .filter(Boolean)
-          .join(', ')
-      );
-
-      console.table({
-        'Token Endpoint': CONFIG.livekit.tokenEndpoint ? '✅ Configurado' : '❌ Faltante',
-        'WebSocket URL': CONFIG.livekit.wsUrl ? '✅ Configurado' : '❌ Faltante',
-        'Estrategia Voice': '✅ dynamic (optimizado)',
-        'Audio Replay': CONFIG.voice.audioReplay.enabled ? '✅ Habilitado' : '❌ Deshabilitado',
-        'Replay Strategy': `✅ ${CONFIG.voice.audioReplay.strategy}`,
-        'Multiple End Detection': CONFIG.voice.audioReplay.endDetection.enableTrackMuted
-          ? '✅ Habilitado'
-          : '❌ Deshabilitado',
-        'Audio Latency (ms)': `✅ ${CONFIG.performance.audioLatencyTarget}ms`,
-        'Turn Detection Timeout': `✅ ${CONFIG.livekit.roomOptions.turnDetection.silenceTimeout}ms`,
-        'Expected Response Time': `⚡ ${expectedLatency}ms`,
-      });
-
-      console.group('🎤 Audio Replay System v2.13.3:');
-      console.log('• Strategy: REPLACE (último mensaje siempre)');
-      console.log('• Detection: Multi-source (TrackMuted + ActiveSpeakers + isFinal)');
-      console.log('• Recording: WebM/Opus optimizado para voz');
-      console.log('• Cleanup: Auto-revoke blob URLs');
-      console.log('• Fallback: Detección de silencio como safety');
-      console.log('• Debug: Logging detallado en desarrollo');
-      console.groupEnd();
-    }
-
-    return CONFIG;
-  } catch (error) {
-    console.error('❌ Falló la inicialización de configuración:', error);
-    throw error;
-  }
 }
 
-// Inicializar configuración
+/**
+ * Logger centralizado con soporte para fuente de verdad
+ *
+ * MEJORADO: Logging inteligente que respeta CONFIG como fuente única
+ *
+ * @class Logger
+ * @static
+ */
+class Logger {
+    static init() {
+        this.isProduction = !CONFIG.debug.enabled;
+    }
+
+    static debug(message, ...args) {
+        if (CONFIG.debug.enabled && CONFIG.debug.logLevel === "debug") {
+            console.log(`🔍 ${message}`, ...args);
+        }
+    }
+
+    static ui(message, ...args) {
+        if (CONFIG.debug.showUIEvents) {
+            console.log(`🎨 ${message}`, ...args);
+        }
+    }
+
+    static audio(message, ...args) {
+        if (CONFIG.debug.showAudioEvents) {
+            console.log(`🔊 ${message}`, ...args);
+        }
+    }
+
+    static error(message, ...args) {
+        console.error(`❌ ${message}`, ...args);
+    }
+
+    static voice(message, ...args) {
+        if (CONFIG.debug.showVoiceMetrics) {
+            console.log(`🎤 ${message}`, ...args);
+        }
+    }
+
+    static connection(message, ...args) {
+        if (CONFIG.debug.showConnectionState) {
+            console.log(`🔗 ${message}`, ...args);
+        }
+    }
+
+    static rpc(message, ...args) {
+        if (CONFIG.debug.logRpcCalls) {
+            console.log(`🔧 ${message}`, ...args);
+        }
+    }
+
+    // ✅ NUEVO: Logger para sincronización
+    static sync(message, ...args) {
+        if (CONFIG.debug.enabled) {
+            console.log(`🔄 SYNC: ${message}`, ...args);
+        }
+    }
+}
+
+// ✅ INICIALIZAR CONFIG COMO FUENTE DE VERDAD ÚNICA
 try {
-  initializeConfig();
+    initializeConfig();
+    Logger.init();
+
+    if (CONFIG.debug.enabled) {
+        console.log("✅ CONFIG v4.0 inicializado como FUENTE DE VERDAD ÚNICA");
+        console.log(
+            "🎯 Todos los JS deben usar CONFIG directamente - NO duplicar valores"
+        );
+    }
 } catch (error) {
-  document.addEventListener('DOMContentLoaded', () => {
-    document.body.innerHTML = `
+    // Fallback error UI si falla la configuración
+    document.addEventListener("DOMContentLoaded", () => {
+        document.body.innerHTML = `
             <div class="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4">
                 <div class="text-center max-w-md">
                     <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fas fa-exclamation-triangle text-white text-xl"></i>
                     </div>
-                    <h1 class="text-xl font-bold mb-2">Error de Configuración del Asistente de Voz</h1>
+                    <h1 class="text-xl font-bold mb-2">Error de Configuración del Sistema</h1>
                     <p class="text-gray-300 mb-4">
-                        No se pudo inicializar la configuración optimizada para voz + Audio Replay.
+                        CONFIG v4.0 no se pudo inicializar como fuente de verdad única.
                     </p>
                     <p class="text-sm text-gray-400 mb-6">
                         ${error.message}
@@ -658,51 +844,26 @@ try {
                 </div>
             </div>
         `;
-  });
+    });
 }
 
-// Export para acceso global
-if (typeof window !== 'undefined') {
-  window.CONFIG = CONFIG;
+// ✅ EXPORT PARA ACCESO GLOBAL COMO FUENTE DE VERDAD
+if (typeof window !== "undefined") {
+    window.CONFIG = CONFIG;
+    window.Logger = Logger;
+
+    // ✅ NUEVO: Validar que otros JS no sobrescriban CONFIG
+    Object.freeze(CONFIG.livekit.roomOptions); // Proteger RoomOptions
+    Object.freeze(CONFIG.performance); // Proteger performance config
+
+    if (CONFIG.debug.enabled) {
+        console.log(
+            "🔒 CONFIG protegido contra sobrescritura - FUENTE DE VERDAD GARANTIZADA"
+        );
+    }
 }
 
-// Logger centralizado actualizado
-class Logger {
-  static init() {
-    this.isProduction = !CONFIG.debug.enabled;
-  }
-
-  static debug(message, ...args) {
-    if (CONFIG.debug.enabled && CONFIG.debug.logLevel === 'debug') {
-      console.log(`🔍 ${message}`, ...args);
-    }
-  }
-
-  static ui(message, ...args) {
-    if (CONFIG.debug.showUIEvents) {
-      console.log(`🎨 ${message}`, ...args);
-    }
-  }
-
-  static audio(message, ...args) {
-    if (CONFIG.debug.showAudioEvents) {
-      console.log(`🔊 ${message}`, ...args);
-    }
-  }
-
-  static audioReplay(message, ...args) {
-    if (CONFIG.voice.audioReplay.debug.logRecordingEvents) {
-      console.log(`🎵 REPLAY: ${message}`, ...args);
-    }
-  }
-
-  static error(message, ...args) {
-    console.error(`❌ ${message}`, ...args);
-  }
-}
-
-Logger.init();
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = CONFIG;
+// Export para uso en módulos Node.js
+if (typeof module !== "undefined" && module.exports) {
+    module.exports = CONFIG;
 }

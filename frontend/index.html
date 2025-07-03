@@ -1,258 +1,307 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#111b21" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <title>Asistente Virtual – Chat de Voz</title>
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+        />
+        <meta name="theme-color" content="#111b21" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+            name="apple-mobile-web-app-status-bar-style"
+            content="black-translucent"
+        />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <title>Asistente Virtual – Chat de Voz</title>
 
-    <!-- Inter Font from Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+        <!-- Inter Font from Google Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
 
-    <!-- TailwindCSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
-    <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-      rel="stylesheet"
-    />
-    <!-- LiveKit Client SDK v2.13.3 -->
-    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.13.3/dist/livekit-client.umd.min.js"></script>
+        <!-- TailwindCSS -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- Font Awesome -->
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+            rel="stylesheet"
+        />
+        <!-- LiveKit Client SDK v2.13.3 -->
+        <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
 
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="css/styles.css" />
-    <!-- ✨ Voice Call Module -->
-    <link rel="stylesheet" href="css/voice-call.css" />
-  </head>
-  <body>
-    <!-- Main App Container -->
-    <div id="app" class="app-container">
-      <!-- Header -->
-      <header class="app-header" role="banner">
-        <div class="header-content">
-          <!-- Avatar and Info -->
-          <div class="user-info">
-            <div class="avatar-container" aria-hidden="true">
-              <img
-                src="img/avatar.jpg"
-                alt="Avatar del asistente"
-                class="avatar-image"
-                onerror="this.style.display='none'"
-              />
-              <div class="avatar-fallback">
-                <i class="fas fa-robot"></i>
-              </div>
-            </div>
-            <div class="user-details">
-              <h1 class="assistant-name">Asistente Virtual</h1>
-              <div id="status" class="connection-status" role="status" aria-live="polite">
-                <i class="fas fa-circle status-icon" aria-hidden="true"></i>
-                <span id="status-text">Conectando...</span>
-                <!-- ✨ REMOVED: connection-quality from header - now in badge -->
-              </div>
-            </div>
-          </div>
+        <!-- Custom Styles -->
+        <link rel="stylesheet" href="css/styles.css" />
+        <!-- ✨ Voice Call Module -->
+        <link rel="stylesheet" href="css/voice-call.css" />
+    </head>
+    <body>
+        <!-- Main App Container -->
+        <div id="app" class="app-container">
+            <!-- Header -->
+            <header class="app-header" role="banner">
+                <div class="header-content">
+                    <!-- Avatar and Info -->
+                    <div class="user-info">
+                        <div class="avatar-container" aria-hidden="true">
+                            <img
+                                src="img/avatar.jpg"
+                                alt="Avatar del asistente"
+                                class="avatar-image"
+                                onerror="this.style.display='none'"
+                            />
+                            <div class="avatar-fallback">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        </div>
+                        <div class="user-details">
+                            <h1 class="assistant-name">Asistente Virtual</h1>
+                            <div
+                                id="status"
+                                class="connection-status"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <i
+                                    class="fas fa-circle status-icon"
+                                    aria-hidden="true"
+                                ></i>
+                                <span id="status-text">Conectando...</span>
+                                <!-- ✨ REMOVED: connection-quality from header - now in badge -->
+                            </div>
+                        </div>
+                    </div>
 
-          <!-- Header Controls -->
-          <nav class="header-controls" role="navigation" aria-label="Controles principales">
-            <!-- Audio Enable Button -->
-            <button
-              id="audioBtn"
-              class="control-btn audio-btn audio-required"
-              style="display: flex"
-              aria-label="Habilitar reproducción de audio"
-              title="Clic para habilitar audio"
+                    <!-- Header Controls -->
+                    <nav
+                        class="header-controls"
+                        role="navigation"
+                        aria-label="Controles principales"
+                    >
+                        <!-- Audio Enable Button -->
+                        <button
+                            id="audioBtn"
+                            class="control-btn audio-btn audio-required"
+                            style="display: flex"
+                            aria-label="Habilitar reproducción de audio"
+                            title="Clic para habilitar audio"
+                        >
+                            <i
+                                class="fa-solid fa-volume-xmark"
+                                aria-hidden="true"
+                            ></i>
+                        </button>
+
+                        <!-- Voice Call Button -->
+                        <button
+                            id="callBtn"
+                            class="control-btn call-btn"
+                            aria-label="Iniciar llamada de voz"
+                            title="Iniciar llamada de voz"
+                        >
+                            <i class="fas fa-phone" aria-hidden="true"></i>
+                        </button>
+                    </nav>
+                </div>
+            </header>
+
+            <!-- Main Chat Area -->
+            <main
+                id="chat-messages"
+                class="chat-container"
+                role="log"
+                aria-live="polite"
+                aria-label="Conversación"
             >
-              <i class="fa-solid fa-volume-xmark" aria-hidden="true"></i>
-            </button>
+                <!-- Welcome Message -->
+                <div class="welcome-message" role="article">
+                    <div class="welcome-icon">
+                        <i class="fas fa-microphone-alt"></i>
+                    </div>
+                    <h2>¡Hola! Soy tu asistente de voz</h2>
+                    <p>
+                        Puedes escribir un mensaje o usar el botón de llamada
+                        para hablar conmigo
+                    </p>
+                </div>
 
-            <!-- Voice Call Button -->
-            <button
-              id="callBtn"
-              class="control-btn call-btn"
-              aria-label="Iniciar llamada de voz"
-              title="Iniciar llamada de voz"
+                <!-- Typing Indicator-->
+                <article
+                    id="typing-indicator"
+                    class="message-bubble bot typing-bubble"
+                    style="display: none"
+                    role="status"
+                    aria-label="El asistente está escribiendo"
+                >
+                    <div class="typing-animation">
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                    </div>
+                </article>
+            </main>
+
+            <!-- Message Input -->
+            <footer class="message-input-container" role="contentinfo">
+                <form
+                    id="messageForm"
+                    class="message-form"
+                    role="form"
+                    aria-label="Enviar mensaje"
+                >
+                    <!-- Text Input -->
+                    <div class="text-input-container">
+                        <input
+                            id="chatInput"
+                            type="text"
+                            class="text-input"
+                            placeholder="Escribe un mensaje..."
+                            aria-label="Campo de mensaje"
+                            autocomplete="off"
+                            maxlength="1000"
+                        />
+                    </div>
+
+                    <!-- Send Button -->
+                    <button
+                        type="submit"
+                        id="sendBtn"
+                        class="send-btn"
+                        aria-label="Enviar mensaje"
+                        title="Enviar mensaje"
+                    >
+                        <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                    </button>
+                </form>
+            </footer>
+
+            <!-- ✨ VOICE CALL OVERLAY - Con modos Character.AI/WhatsApp -->
+            <section
+                id="call-overlay"
+                class="call-overlay"
+                role="dialog"
+                aria-labelledby="call-title"
+                aria-modal="true"
+                aria-hidden="true"
             >
-              <i class="fas fa-phone" aria-hidden="true"></i>
-            </button>
-          </nav>
-        </div>
-      </header>
+                <!-- Voice Activity Indicator CORREGIDO -->
+                <div
+                    id="voice-activity"
+                    class="voice-activity-container"
+                    style="display: none"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <div class="user-mic-indicator" aria-hidden="true"></div>
+                    <span id="userMicLabel" class="user-mic-label"
+                        >Escuchando...</span
+                    >
+                </div>
 
-      <!-- Main Chat Area -->
-      <main
-        id="chat-messages"
-        class="chat-container"
-        role="log"
-        aria-live="polite"
-        aria-label="Conversación"
-      >
-        <!-- Welcome Message -->
-        <div class="welcome-message" role="article">
-          <div class="welcome-icon">
-            <i class="fas fa-microphone-alt"></i>
-          </div>
-          <h2>¡Hola! Soy tu asistente de voz</h2>
-          <p>Puedes escribir un mensaje o usar el botón de llamada para hablar conmigo</p>
+                <div class="call-container call-content">
+                    <!-- ✨ Brand Section (Character.AI mode) -->
+                    <div class="voice-brand-section">
+                        <div class="voice-brand-logo">
+                            <img
+                                src="img/avatar.jpg"
+                                alt="AI Avatar"
+                                class="voice-brand-image"
+                                onerror="this.style.display='none'"
+                            />
+                            <div class="voice-brand-fallback">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        </div>
+                        <h1 class="voice-brand-name">Asistente Virtual</h1>
+                    </div>
+
+                    <!-- Call Avatar (WhatsApp mode) -->
+                    <div class="call-avatar-container">
+                        <div class="call-avatar">
+                            <img
+                                src="img/avatar.jpg"
+                                alt="Avatar del asistente"
+                                class="call-avatar-image"
+                                onerror="this.style.display='none'"
+                            />
+                            <div class="call-avatar-fallback">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Call Info -->
+                    <div class="call-info">
+                        <h2 id="call-title" class="call-title">
+                            Asistente Virtual 2
+                        </h2>
+                        <p id="call-status" class="call-status">Iniciando...</p>
+                    </div>
+
+                    <!-- Call Controls -->
+                    <nav
+                        class="call-controls"
+                        role="navigation"
+                        aria-label="Controles de llamada"
+                    >
+                        <button
+                            id="muteBtn"
+                            class="call-control-btn mute-btn"
+                            aria-label="Silenciar micrófono"
+                            title="Silenciar micrófono"
+                        >
+                            <i class="fas fa-microphone" aria-hidden="true"></i>
+                        </button>
+
+                        <button
+                            id="hangupBtn"
+                            class="call-control-btn hangup-btn"
+                            aria-label="Finalizar llamada"
+                            title="Finalizar llamada"
+                        >
+                            <i class="fas fa-phone-alt" aria-hidden="true"></i>
+                        </button>
+                    </nav>
+                </div>
+            </section>
+
+            <!-- Call Subtitles -->
+            <div
+                id="call-subtitles"
+                class="call-subtitles"
+                style="display: none"
+                role="status"
+                aria-live="polite"
+                aria-label="Subtítulos de la conversación"
+            ></div>
         </div>
 
-        <!-- Typing Indicator-->
-        <article
-          id="typing-indicator"
-          class="message-bubble bot typing-bubble"
-          style="display: none"
-          role="status"
-          aria-label="El asistente está escribiendo"
+        <!-- ✨ CONTAINERS FIJOS PARA ELEMENTOS DINÁMICOS -->
+        <!-- Toast Container (opcional con CONFIG) -->
+        <div id="toast-container" class="toast-container-hidden"></div>
+
+        <!-- ✨ Connection Quality Badge (opcional con CONFIG) -->
+        <div
+            id="connection-badge"
+            class="connection-badge quality-good"
+            style="display: none"
         >
-          <div class="typing-animation">
-            <span class="typing-dot"></span>
-            <span class="typing-dot"></span>
-            <span class="typing-dot"></span>
-          </div>
-        </article>
-      </main>
-
-      <!-- Message Input -->
-      <footer class="message-input-container" role="contentinfo">
-        <form id="messageForm" class="message-form" role="form" aria-label="Enviar mensaje">
-          <!-- Text Input -->
-          <div class="text-input-container">
-            <input
-              id="chatInput"
-              type="text"
-              class="text-input"
-              placeholder="Escribe un mensaje..."
-              aria-label="Campo de mensaje"
-              autocomplete="off"
-              maxlength="1000"
-            />
-          </div>
-
-          <!-- Send Button -->
-          <button
-            type="submit"
-            id="sendBtn"
-            class="send-btn"
-            aria-label="Enviar mensaje"
-            title="Enviar mensaje"
-          >
-            <i class="fas fa-paper-plane" aria-hidden="true"></i>
-          </button>
-        </form>
-      </footer>
-
-      <!-- ✨ VOICE CALL OVERLAY - Con modos Character.AI/WhatsApp -->
-      <section
-        id="call-overlay"
-        class="call-overlay"
-        role="dialog"
-        aria-labelledby="call-title"
-        aria-modal="true"
-        aria-hidden="true"
-      >
-        <!-- Voice Activity Indicator -->
-        <div id="voice-activity" class="voice-activity" style="display: none"></div>
-
-        <div class="call-container call-content">
-          <!-- ✨ Brand Section (Character.AI mode) -->
-          <div class="voice-brand-section">
-            <div class="voice-brand-logo">
-              <img
-                src="img/avatar.jpg"
-                alt="AI Avatar"
-                class="voice-brand-image"
-                onerror="this.style.display='none'"
-              />
-              <div class="voice-brand-fallback">
-                <i class="fas fa-robot"></i>
-              </div>
-            </div>
-            <h1 class="voice-brand-name">Asistente Virtual</h1>
-          </div>
-
-          <!-- Call Avatar (WhatsApp mode) -->
-          <div class="call-avatar-container">
-            <div class="call-avatar">
-              <img
-                src="img/avatar.jpg"
-                alt="Avatar del asistente"
-                class="call-avatar-image"
-                onerror="this.style.display='none'"
-              />
-              <div class="call-avatar-fallback">
-                <i class="fas fa-robot"></i>
-              </div>
-            </div>
-          </div>
-
-          <!-- Call Info -->
-          <div class="call-info">
-            <h2 id="call-title" class="call-title">Asistente Virtual</h2>
-            <p id="call-status" class="call-status">Iniciando...</p>
-          </div>
-
-          <!-- Call Controls -->
-          <nav class="call-controls" role="navigation" aria-label="Controles de llamada">
-            <button
-              id="muteBtn"
-              class="call-control-btn mute-btn"
-              aria-label="Silenciar micrófono"
-              title="Silenciar micrófono"
-            >
-              <i class="fas fa-microphone" aria-hidden="true"></i>
-            </button>
-
-            <button
-              id="hangupBtn"
-              class="call-control-btn hangup-btn"
-              aria-label="Finalizar llamada"
-              title="Finalizar llamada"
-            >
-              <i class="fas fa-phone-alt" aria-hidden="true"></i>
-            </button>
-          </nav>
+            <i class="fas fa-signal signal-icon"></i>
+            <span class="quality-dots">●●○</span>
+            <span class="latency-text">000ms</span>
         </div>
-      </section>
 
-      <!-- Call Subtitles -->
-      <div
-        id="call-subtitles"
-        class="call-subtitles"
-        style="display: none"
-        role="status"
-        aria-live="polite"
-        aria-label="Subtítulos de la conversación"
-      ></div>
-    </div>
-
-    <!-- ✨ CONTAINERS FIJOS PARA ELEMENTOS DINÁMICOS -->
-    <!-- Toast Container (opcional con CONFIG) -->
-    <div id="toast-container" class="toast-container-hidden"></div>
-
-    <!-- ✨ Connection Quality Badge (opcional con CONFIG) -->
-    <div id="connection-badge" class="connection-badge quality-good" style="display: none">
-      <i class="fas fa-signal signal-icon"></i>
-      <span class="quality-dots">●●○</span>
-      <span class="latency-text">124ms</span>
-    </div>
-
-    <!-- Scripts -->
-    <script>
-      // Browser compatibility check
-      if (typeof LivekitClient === 'undefined') {
-        console.error('❌ LiveKit Client SDK v2.13.3 no cargado correctamente');
-        document.body.innerHTML = `
+        <!-- Scripts -->
+        <script>
+            // Browser compatibility check
+            if (typeof LivekitClient === "undefined") {
+                console.error(
+                    "❌ LiveKit Client SDK v2.13.3 no cargado correctamente"
+                );
+                document.body.innerHTML = `
                     <div class="error-container">
                         <div class="error-content">
                             <div class="error-icon">
@@ -266,22 +315,22 @@
                         </div>
                     </div>
                 `;
-      } else {
-        console.log('✅ LiveKit Client SDK v2.13.3 cargado correctamente');
+            } else {
+                console.log(
+                    "✅ LiveKit Client SDK v2.13.3 cargado correctamente"
+                );
 
-        if (
-          typeof LivekitClient.isBrowserSupported === 'function' &&
-          !LivekitClient.isBrowserSupported()
-        ) {
-          console.warn('⚠️ Navegador no soportado completamente');
-        }
-      }
-    </script>
-    <script src="js/config.js"></script>
-    <script src="js/ui-manager.js"></script>
-    <script src="js/voice-agent.js"></script>
-    <script src="js/app.js"></script>
-    <!-- ✨ Voice Call Module -->
-    <script src="js/voice-call.js"></script>
-  </body>
+                if (
+                    typeof LivekitClient.isBrowserSupported === "function" &&
+                    !LivekitClient.isBrowserSupported()
+                ) {
+                    console.warn("⚠️ Navegador no soportado completamente");
+                }
+            }
+        </script>
+        <script src="js/config.js"></script>
+        <script src="js/ui-manager.js"></script>
+        <script src="js/voice-agent-sdk.js"></script>
+        <script src="js/app.js"></script>
+    </body>
 </html>

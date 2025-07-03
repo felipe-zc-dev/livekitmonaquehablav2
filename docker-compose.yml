@@ -1,8 +1,27 @@
-# docker-compose.yml - MonaQueHabla v1.9.0
-# IP del host: 192.168.1.84
-# Generado: 2025-06-12 15:49:36
-
 services:
+  livekit-server:
+    image: livekit/livekit-server:latest
+    container_name: monaquehabla-livekit
+    ports:
+      - "${LIVEKIT_PORT:-7880}:7880"     # WebSocket signaling
+      - "7881:7881"                      # RTC TCP port
+      - "40000-40100:40000-40100/udp"    # RTC UDP range (CRÍTICO para WebRTC)
+    env_file:
+      - .env
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    # command: ["--dev", "--bind", "0.0.0.0"]
+    command: ["--config", "/etc/livekit.yaml", "--bind", "0.0.0.0"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7880 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - livekit-network
+
   token-server:
     build:
       context: .
@@ -10,24 +29,29 @@ services:
       target: development
     container_name: monaquehabla-token-server
     ports:
-      - "8000:8000"
+      - "${TOKEN_SERVER_PORT:-8000}:${PORT:-8000}"
     env_file:
       - .env
-      - .env.local
     environment:
       - PYTHONUNBUFFERED=1
-      - LIVEKIT_URL=ws://192.168.1.84:7880
-      - PORT=8000
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
     volumes:
-      - ./services:/app/services
+      - ./services:/app/services:rw
       - ./frontend:/app/frontend:rw
     restart: unless-stopped
+    depends_on:
+      livekit-server:
+        condition: service_healthy
+    command: python services/token_server.py
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
+      interval: 15s
+      timeout: 5s
       retries: 3
-    command: python services/token_server.py
+      start_period: 10s
+    networks:
+      - livekit-network
 
   voice-agent:
     build:
@@ -36,39 +60,26 @@ services:
       target: development
     container_name: monaquehabla-voice-agent
     ports:
-      - "8081:8081"
+      - "${AGENT_PORT:-8081}:${PORT:-8081}"
     env_file:
       - .env
-      - .env.local
     environment:
       - PYTHONUNBUFFERED=1
-      - LIVEKIT_URL=ws://192.168.1.84:7880
-      - PORT=8081
     volumes:
-      - ./agents:/app/agents
-      - ./core:/app/core
-      - ./services:/app/services
-      - ./personas:/app/personas:ro
+      - ./agents:/app/agents:rw
+      - ./core:/app/core:rw
+      - ./services:/app/services:rw
+      - ./personas:/app/personas:rw
     restart: unless-stopped
     depends_on:
+      livekit-server:
+        condition: service_healthy
       token-server:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     command: python agent.py start
-
-  frontend:
-    image: nginx:alpine
-    container_name: monaquehabla-frontend
-    ports:
-      - "5000:80"
-    volumes:
-      - ./frontend:/usr/share/nginx/html:rw
-    restart: unless-stopped
+    networks:
+      - livekit-network
 
 networks:
-  default:
-    name: monaquehabla-network
+  livekit-network:
+    driver: bridge

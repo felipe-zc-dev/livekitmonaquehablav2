@@ -1,196 +1,62 @@
-# render.yaml - MonaQueHabla v2.0 OPTIMIZADO
-# ✅ Environment Groups + Dockerfile unificado + Static frontend
-# ✅ Basado en docs oficiales: https://render.com/docs + https://docs.livekit.io/agents/
-
-version: "1"
-
-# ================================================================
-# ENVIRONMENT GROUPS - Centraliza variables (DRY principle)
-# ================================================================
-envVarGroups:
-  # Grupo LiveKit (OBLIGATORIO)
-  - name: livekit-config
-    envVars:
-      - key: LIVEKIT_WS_URL
-        value: wss://monaquehabla-226n27am.livekit.cloud  # 👈 TU URL REAL
-      - key: LIVEKIT_API_KEY
-        value: your-api-key                               # 👈 CAMBIAR en Dashboard
-      - key: LIVEKIT_API_SECRET
-        value: your-api-secret                            # 👈 CAMBIAR en Dashboard (SECRET)
-
-  # Grupo AI Services (OPCIONAL)
-  - name: ai-services
-    envVars:
-      - key: OPENAI_API_KEY
-        value: your-openai-key                            # 👈 CAMBIAR en Dashboard (SECRET)
-      - key: ELEVENLABS_API_KEY
-        value: your-elevenlabs-key                        # 👈 CAMBIAR en Dashboard (SECRET)
-      - key: DEEPGRAM_API_KEY
-        value: your-deepgram-key                          # 👈 CAMBIAR en Dashboard (SECRET)
-
-  # Grupo App Config
-  - name: app-config
-    envVars:
-      - key: PYTHONUNBUFFERED
-        value: "1"
-      - key: PYTHONPATH
-        value: "/app"
-      - key: LOG_LEVEL
-        value: "INFO"
-      - key: ENVIRONMENT
-        value: "production"
-
 services:
-  # ================================================================
-  # VOICE AGENT - Servicio principal (Worker)
-  # ================================================================
-  - type: pserv
-    name: monaquehabla-agent
-    runtime: docker
-    region: virginia
-    plan: starter
-
-    # ✅ Dockerfile unificado (sin dockerBuildArgs)
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-
-    # ✅ Environment Groups + SERVICE selector
-    envVars:
-      - key: SERVICE
-        value: agent  # 🎯 CLAVE: selecciona voice agent
-      - fromGroup: livekit-config
-      - fromGroup: ai-services
-      - fromGroup: app-config
-      # Específicos del agent
-      - key: PORT
-        value: "8081"
-
-    # ✅ Autoscaling optimizado para voice
-    scaling:
-      minInstances: 1
-      maxInstances: 5
-      targetCPUPercent: 50
-      targetMemoryPercent: 60
-
-    # ✅ Graceful shutdown para voice sessions
-    maxShutdownDelaySeconds: 300  # 5 min máximo Render
-
-    # ✅ Build filter optimizado
-    buildFilter:
-      paths:
-        - "agents/**"
-        - "core/**"
-        - "services/**"
-        - "personas/**"
-        - "agent.py"
-        - "requirements.txt"
-        - "Dockerfile"
-      ignoredPaths:
-        - "frontend/**"
-        - "tests/**"
-        - "**/.git/**"
-        - "**/__pycache__/**"
-        - "**/*.pyc"
-        - "**/*.md"
-
-  # ================================================================
-  # TOKEN SERVER - API Web Service
-  # ================================================================
   - type: web
-    name: monaquehabla-token-server
-    runtime: docker
-    region: virginia
+    name: web-server-mona
+    runtime: python
+    repo: https://github.com/felipe-zc-dev/livekitmonaquehablav2
+    rootDir: .
+    branch: main
     plan: starter
-
-    # ✅ Mismo Dockerfile (sin dockerBuildArgs)
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-
-    # ✅ Environment Groups + SERVICE selector
+    region: virginia
     envVars:
-      - key: SERVICE
-        value: token-server  # 🎯 CLAVE: selecciona token server
-      - fromGroup: livekit-config
-      - fromGroup: app-config
-      # Específicos del token server
+      - fromGroup: pareja-virtual-env
       - key: PORT
         value: "8000"
-      - key: ALLOWED_ORIGINS
-        value: "*"  # Cambiar por tu dominio en producción
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: POETRY_VERSION
+        value: "2.1.3"
+    # ✅ CAMBIADO: Poetry nativo
+    buildCommand: poetry install --only=main --no-interaction
+    startCommand: poetry run python services/token_server.py
 
-    # ✅ Health check específico
-    healthCheckPath: /health
-
-    # ✅ Scaling para web requests
+  - type: pserv
+    name: agente-lk-mona
+    runtime: docker
+    repo: https://github.com/felipe-zc-dev/livekitmonaquehablav2
+    rootDir: .
+    plan: pro
+    envVars:
+      - fromGroup: pareja-virtual-env
+    region: virginia
+    maxShutdownDelaySeconds: 300
     scaling:
       minInstances: 1
-      maxInstances: 3
-      targetCPUPercent: 70
+      maxInstances: 2
+      targetCPUPercent: 75
+      targetMemoryPercent: 75
 
-    # ✅ Build filter (sin agents/)
-    buildFilter:
-      paths:
-        - "services/**"
-        - "core/**"
-        - "frontend/**"
-        - "requirements.txt"
-        - "Dockerfile"
-      ignoredPaths:
-        - "agents/**"
-        - "personas/**"
-        - "tests/**"
-        - "**/.git/**"
-        - "**/__pycache__/**"
-
-  # ================================================================
-  # FRONTEND - Static Service OPTIMIZADO
-  # ================================================================
-  - type: web
-    name: monaquehabla-frontend
-    runtime: static
-
-    # ✅ Static site configuration
-    staticPublishPath: ./frontend
-
-    # ✅ Environment para build
+envVarGroups:
+  - name: pareja-virtual-env
     envVars:
-      - fromGroup: app-config
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: LIVEKIT_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: HF_HUB_TOKEN
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: "us-east-1"
 
-    # ✅ Build filter (solo frontend)
-    buildFilter:
-      paths:
-        - "frontend/**"
-      ignoredPaths:
-        - "**/*.md"
-        - "**/.DS_Store"
-
-    # ✅ Performance headers
-    headers:
-      - path: "/*"
-        name: "X-Frame-Options"
-        value: "DENY"
-      - path: "/*"
-        name: "X-Content-Type-Options"
-        value: "nosniff"
-      - path: "/css/*"
-        name: "Cache-Control"
-        value: "public, max-age=31536000, immutable"
-      - path: "/js/*"
-        name: "Cache-Control"
-        value: "public, max-age=31536000, immutable"
-      - path: "/img/*"
-        name: "Cache-Control"
-        value: "public, max-age=31536000, immutable"
-
-    # ✅ Routes para SPA
-    routes:
-      - type: rewrite
-        source: "/*"
-        destination: "/index.html"
-
-# ================================================================
-# PREVIEWS CONFIGURATION
-# ================================================================
-previews:
-  generation: manual
-  expireAfterDays: 7
+version: "1"

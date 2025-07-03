@@ -59,10 +59,12 @@
    MODO 1: CHARACTER.AI STYLE
    ============================================= */
 .call-overlay.voice-mode-character {
-    background: radial-gradient(ellipse at top,
-            var(--voice-char-secondary) 0%,
-            var(--voice-char-primary) 50%,
-            var(--voice-char-accent) 100%);
+    background: radial-gradient(
+        ellipse at top,
+        var(--voice-char-secondary) 0%,
+        var(--voice-char-primary) 50%,
+        var(--voice-char-accent) 100%
+    );
 }
 
 .call-overlay.voice-mode-character .call-content {
@@ -121,7 +123,9 @@
 }
 
 /* Cuando la imagen se carga correctamente, ocultar el fallback */
-.call-overlay.voice-mode-character .voice-brand-image:not([style*='display: none'])+.voice-brand-fallback {
+.call-overlay.voice-mode-character
+    .voice-brand-image:not([style*="display: none"])
+    + .voice-brand-fallback {
     opacity: 0;
     pointer-events: none;
 }
@@ -165,7 +169,7 @@
 }
 
 .call-overlay.voice-mode-whatsapp.has-avatar::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.3);
@@ -226,32 +230,69 @@
 .call-overlay.voice-mode-whatsapp .call-controls {
     margin-bottom: calc(2rem + env(safe-area-inset-bottom));
 }
-
 /* =============================================
-   VOICE ACTIVITY INDICATOR
+   🎤 USER VOICE ACTIVITY - Solo cuando habla
    ============================================= */
-.voice-activity {
+
+.voice-activity-container {
+    /* Posición: Top-center como en las imágenes */
     position: absolute;
     top: calc(1rem + env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
+
+    /* Layout: Flexbox vertical centrado */
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    background: var(--voice-activity-active);
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    box-shadow:
-        0 2px 8px rgba(0, 168, 132, 0.4),
-        0 0 0 4px rgba(0, 168, 132, 0.1);
-    animation: voiceActivityPulse 2s infinite ease-in-out;
+    gap: 0.5rem;
+
+    /* Z-index: Por encima del contenido */
     z-index: 1020;
+
+    /* Transiciones suaves */
+    transition: all var(--voice-transition-normal);
+
+    /* Oculto por defecto - solo visible cuando usuario habla */
+    opacity: 0;
+    visibility: hidden;
 }
 
-.voice-activity::after {
-    content: '';
+.voice-activity-container.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 🟢 Indicador visual del micrófono */
+.user-mic-indicator {
+    /* Tamaño y forma */
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+
+    /* Color verde WhatsApp - Usuario hablando */
+    background: rgba(0, 168, 132, 0.95);
+
+    /* Bordes y sombras */
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 2px 8px rgba(0, 168, 132, 0.4),
+        0 0 0 4px rgba(0, 168, 132, 0.15);
+
+    /* Animación sutil de pulso */
+    animation: userMicPulse 2s infinite ease-in-out;
+
+    /* Posición relativa para punto interno */
+    position: relative;
+}
+
+/* Punto blanco interno */
+.user-mic-indicator::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
     width: 8px;
     height: 8px;
     background: white;
@@ -259,12 +300,237 @@
     opacity: 0.9;
 }
 
-.voice-activity.thinking {
-    background: var(--voice-activity-thinking);
-    box-shadow:
-        0 2px 8px rgba(255, 171, 0, 0.4),
-        0 0 0 4px rgba(255, 171, 0, 0.1);
-    animation: voiceThinkingPulse 1.5s infinite ease-in-out;
+/* 📝 Label del usuario */
+.user-mic-label {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+    /* Texto centrado */
+    text-align: center;
+    white-space: nowrap;
+
+    /* Evitar selección */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* =============================================
+   🤖 BOT STATUS - Enhanced Typography
+   ============================================= */
+
+.bot-status-text {
+    /* 📏 TIPOGRAFÍA MEJORADA - Más prominente */
+    font-size: var(--font-size-lg); /* Era var(--font-size-sm) */
+    font-weight: var(
+        --font-weight-semibold
+    ); /* Era var(--font-weight-medium) */
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+
+    /* 🎨 COLORES - Usando design system existente */
+    color: var(--text-primary); /* Color base más visible */
+    text-align: center;
+
+    /* 📱 ESPACIADO */
+    margin: 0;
+    padding: 0.25rem 0;
+
+    /* ✨ EFECTOS VISUALES */
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+    /* 🔄 TRANSICIONES SUAVES */
+    transition: all var(--transition-normal);
+}
+
+/* =============================================
+   🎨 ESTADOS CON COLORES DEL ROOT
+   ============================================= */
+
+/* 🟡 Estado: Pensando */
+.bot-status-text.thinking {
+    color: var(--color-warning); /* Amarillo del sistema */
+    text-shadow: 0 1px 3px rgba(255, 171, 0, 0.3);
+}
+
+/* 🔵 Estado: Respondiendo */
+.bot-status-text.responding {
+    color: var(--color-primary); /* Azul primario del sistema */
+    text-shadow: 0 1px 3px rgba(99, 102, 241, 0.3);
+}
+
+/* 🟢 Estado: Listo/Conectado */
+.bot-status-text.ready {
+    color: var(--color-success); /* Verde del sistema */
+    text-shadow: 0 1px 3px rgba(0, 216, 86, 0.3);
+}
+
+/* 🔴 Estado: Error */
+.bot-status-text.error {
+    color: var(--color-danger); /* Rojo del sistema */
+    text-shadow: 0 1px 3px rgba(255, 107, 107, 0.3);
+}
+
+/* ⚪ Estado: Conectando */
+.bot-status-text.connecting {
+    color: var(--text-secondary); /* Gris del sistema */
+    text-shadow: 0 1px 3px rgba(134, 150, 160, 0.3);
+}
+
+/* =============================================
+   ✨ ANIMACIÓN DE PUNTOS SUSPENSIVOS
+   ============================================= */
+
+/* 🎭 Contenedor para la animación de puntos */
+.bot-status-text .animated-dots {
+    display: inline-block;
+    position: relative;
+    font-family: inherit;
+    font-weight: inherit;
+    color: inherit;
+}
+
+/* 🎪 Los tres puntos individuales */
+.bot-status-text .animated-dots::after {
+    content: "";
+    display: inline-block;
+    width: 20px; /* Espacio para 3 puntos */
+    text-align: left;
+    animation: typingDots 1.5s infinite;
+}
+
+/* 🌟 Keyframes para la animación de puntos */
+@keyframes typingDots {
+    0% {
+        content: "";
+    }
+    25% {
+        content: ".";
+    }
+    50% {
+        content: "..";
+    }
+    75% {
+        content: "...";
+    }
+    100% {
+        content: "";
+    }
+}
+
+/* =============================================
+   🎨 VARIANTE ALTERNATIVA - Puntos que pulsan
+   ============================================= */
+
+/* 🔄 Animación alternativa: puntos que aparecen secuencialmente */
+.bot-status-text .pulsing-dots {
+    display: inline-block;
+}
+
+.bot-status-text .pulsing-dots .dot {
+    opacity: 0;
+    animation: dotPulse 1.4s infinite;
+}
+
+.bot-status-text .pulsing-dots .dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.bot-status-text .pulsing-dots .dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.bot-status-text .pulsing-dots .dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes dotPulse {
+    0%,
+    20% {
+        opacity: 0;
+        transform: scale(1);
+    }
+    40% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    60%,
+    100% {
+        opacity: 0;
+        transform: scale(1);
+    }
+}
+
+/* =============================================
+   📱 RESPONSIVE DESIGN - Tamaños adaptativos
+   ============================================= */
+
+/* 📱 Mobile: Texto ligeramente más pequeño pero aún prominente */
+@media (max-width: 480px) {
+    .bot-status-text {
+        font-size: var(--font-size-base); /* En lugar de lg */
+        font-weight: var(--font-weight-medium);
+        padding: 0.125rem 0;
+    }
+}
+
+/* 💻 Desktop: Texto más grande y espacioso */
+@media (min-width: 768px) {
+    .bot-status-text {
+        font-size: var(--font-size-xl); /* Aún más grande en desktop */
+        font-weight: var(--font-weight-semibold);
+        padding: 0.375rem 0;
+        letter-spacing: -0.02em;
+    }
+}
+
+/* =============================================
+   🎭 EFECTOS ADICIONALES - Hover y Focus
+   ============================================= */
+
+/* 🎯 Efecto sutil en hover (solo en desktop) */
+@media (hover: hover) {
+    .bot-status-text:hover {
+        transform: scale(1.02);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+}
+
+/* ♿ Accessibility: Respeta preferencias de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+    .bot-status-text .animated-dots::after,
+    .bot-status-text .pulsing-dots .dot {
+        animation: none;
+    }
+
+    .bot-status-text .animated-dots::after {
+        content: "..."; /* Puntos estáticos */
+    }
+
+    .bot-status-text .pulsing-dots .dot {
+        opacity: 1; /* Puntos siempre visibles */
+    }
+}
+
+/* =============================================
+   ANIMACIONES
+   ============================================= */
+
+/* Animación del indicador de usuario */
+@keyframes userMicPulse {
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(0, 168, 132, 0.4),
+            0 0 0 4px rgba(0, 168, 132, 0.15);
+    }
+
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 168, 132, 0.6),
+            0 0 0 6px rgba(0, 168, 132, 0.25);
+    }
 }
 
 /* =============================================
@@ -318,25 +584,21 @@
 }
 
 @keyframes voiceActivityPulse {
-
     0%,
     100% {
         transform: scale(1);
-        box-shadow:
-            0 2px 8px rgba(0, 168, 132, 0.4),
+        box-shadow: 0 2px 8px rgba(0, 168, 132, 0.4),
             0 0 0 4px rgba(0, 168, 132, 0.1);
     }
 
     50% {
         transform: scale(1.1);
-        box-shadow:
-            0 4px 12px rgba(0, 168, 132, 0.6),
+        box-shadow: 0 4px 12px rgba(0, 168, 132, 0.6),
             0 0 0 8px rgba(0, 168, 132, 0.2);
     }
 }
 
 @keyframes voiceThinkingPulse {
-
     0%,
     100% {
         opacity: 0.8;
@@ -411,4 +673,41 @@
 
 .call-overlay:not(.active) .voice-activity {
     display: none;
+}
+/* =============================================
+   RESPONSIVE DESIGN
+   ============================================= */
+
+/* Mobile: Ajustar tamaño en pantallas pequeñas */
+@media (max-width: 480px) {
+    .user-mic-indicator {
+        width: 20px;
+        height: 20px;
+    }
+
+    .user-mic-indicator::after {
+        width: 6px;
+        height: 6px;
+    }
+
+    .user-mic-label {
+        font-size: 10px;
+    }
+
+    .voice-activity-container {
+        top: calc(0.75rem + env(safe-area-inset-top));
+    }
+}
+
+/* Desktop: Indicador ligeramente más grande */
+@media (min-width: 768px) {
+    .user-mic-indicator {
+        width: 28px;
+        height: 28px;
+    }
+
+    .user-mic-indicator::after {
+        width: 10px;
+        height: 10px;
+    }
 }
