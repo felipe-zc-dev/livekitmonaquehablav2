@@ -1,6 +1,6 @@
 """
 Token server para LiveKit: expone endpoints para generar tokens y health-check.
-✅ REFACTORIZADO: Complejidad reducida + mejores prácticas LiveKit 1.0
+✅ CORREGIDO: Rutas relativas + Render.com + LiveKit 1.0 + PEP 8
 """
 
 import json
@@ -8,6 +8,7 @@ import logging
 import os
 import uuid
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
@@ -17,7 +18,7 @@ from flask_cors import CORS
 # ✅ IMPORTACIONES OFICIALES LIVEKIT 1.0
 from livekit import api
 
-# Configuración de logging (sin lazy formatting)
+# ✅ CONFIGURACIÓN DE LOGGING SIN LAZY FORMATTING
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -25,6 +26,21 @@ logger = logging.getLogger(__name__)
 
 # Carga variables de entorno desde .env
 load_dotenv()
+
+# ✅ RUTAS RELATIVAS PORTABLES (Docker + Render.com)
+BASE_DIR = Path(__file__).parent.resolve()
+FRONTEND_DIR = BASE_DIR.parent / "frontend"
+
+# Verificar que el directorio frontend existe
+if not FRONTEND_DIR.exists():
+    logger.warning("Directorio frontend no encontrado en: %s", FRONTEND_DIR)
+    # Fallback para diferentes estructuras
+    FRONTEND_DIR = BASE_DIR / "frontend"
+    if not FRONTEND_DIR.exists():
+        logger.error("No se encontró directorio frontend en ninguna ubicación")
+        raise FileNotFoundError(f"Frontend directory not found: {FRONTEND_DIR}")
+
+logger.info("Frontend directory: %s", FRONTEND_DIR)
 
 # Verificar variables de entorno críticas
 API_KEY = os.getenv("LIVEKIT_API_KEY")
@@ -34,38 +50,65 @@ LIVEKIT_URL = os.getenv("LIVEKIT_URL")
 if not (API_KEY and API_SECRET and LIVEKIT_URL):
     raise RuntimeError("Faltan LIVEKIT_API_KEY, LIVEKIT_API_SECRET o LIVEKIT_URL en el entorno")
 
-# ✅ CONFIGURACIÓN SIMPLIFICADA (LiveKit bind 0.0.0.0)
-logger.info("🔧 Configuración LiveKit:")
+# ✅ CONFIGURACIÓN LIVEKIT 1.0
+logger.info("🔧 Configuración LiveKit 1.0:")
 logger.info("  URL: %s", LIVEKIT_URL)
-logger.info("  Solución: LiveKit bind 0.0.0.0 (accesible desde Docker + navegador)")
+logger.info("  Frontend: %s", FRONTEND_DIR)
 
-# Verificar si URL es segura para micrófono (solo warning)
+# Verificar si URL es segura para micrófono
 if not LIVEKIT_URL.startswith("wss://") and not LIVEKIT_URL.startswith("ws://localhost"):
     logger.warning(
-        "⚠️ ADVERTENCIA: URL no comienza con 'wss://' o 'ws://localhost'. "
-        "Los navegadores pueden bloquear el acceso al micrófono en algunas configuraciones. "
-        "Valor actual: %s",
+        "⚠️ ADVERTENCIA: URL no segura para micrófono. "
+        "Los navegadores requieren HTTPS/WSS. URL actual: %s",
         LIVEKIT_URL,
     )
 
-# Crear aplicación Flask
-app = Flask(__name__, static_folder="frontend", static_url_path="")
+# ✅ FLASK APP CON RUTAS RELATIVAS PORTABLES
+app = Flask(
+    __name__, static_folder=str(FRONTEND_DIR), static_url_path=""  # Ruta relativa calculada
+)
 
-# Configurar CORS correctamente para toda la aplicación
+# Configurar CORS correctamente
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Diccionario para almacenar tokens de sesión activos (user_id -> token_info)
+# Diccionario para almacenar tokens activos
 active_sessions: dict[str, dict[str, Any]] = {}
 
-# ✅ LÍMITES DE TAMAÑO PARA METADATOS (según docs oficiales)
-MAX_METADATA_SIZE = 500  # Caracteres
-MAX_ATTRIBUTES_SIZE = 500  # Caracteres
+# ✅ LÍMITES SEGÚN DOCS LIVEKIT 1.0
+MAX_METADATA_SIZE = 500
+MAX_ATTRIBUTES_SIZE = 500
 
 
 @app.route("/")
 def index() -> Response:
-    """Sirve la página principal de la aplicación."""
-    return send_from_directory("frontend", "index.html")
+    """
+    Sirve la página principal de la aplicación.
+    ✅ CORREGIDO: Usa ruta relativa portable
+    """
+    index_path = FRONTEND_DIR / "index.html"
+
+    if not index_path.exists():
+        logger.error("index.html no encontrado en: %s", index_path)
+        abort(404, description="Frontend no disponible")
+
+    try:
+        return send_from_directory(str(FRONTEND_DIR), "index.html")
+    except Exception as e:
+        logger.error("Error sirviendo index.html: %s", str(e))
+        abort(500, description="Error interno del servidor")
+
+
+@app.route("/assets/<path:filename>")
+def serve_assets(filename: str) -> Response:
+    """
+    Sirve archivos estáticos del frontend.
+    ✅ NUEVO: Endpoint específico para assets
+    """
+    try:
+        return send_from_directory(str(FRONTEND_DIR), filename)
+    except Exception as e:
+        logger.error("Error sirviendo asset %s: %s", filename, str(e))
+        abort(404, description="Archivo no encontrado")
 
 
 def generate_room_name(user_id: str) -> str:
@@ -119,12 +162,6 @@ def _validate_request_data(data: dict[str, Any]) -> tuple[str, str, str, str, st
     """
     Valida y extrae datos de la request.
     ✅ FUNCIÓN SEPARADA: Reduce complejidad de get_token()
-
-    Args:
-        data: Datos JSON de la request
-
-    Returns:
-        Tupla con (identity, user_id, room, io_mode, persona_id)
     """
     # Obtener o generar identity
     identity = str(data.get("identity", ""))
@@ -160,15 +197,7 @@ def _validate_request_data(data: dict[str, Any]) -> tuple[str, str, str, str, st
 
 def _create_metadata(io_mode: str, persona_id: str) -> tuple[dict[str, str], str]:
     """
-    Crea metadatos validados.
-    ✅ FUNCIÓN SEPARADA: Reduce complejidad de get_token()
-
-    Args:
-        io_mode: Modo de interacción
-        persona_id: ID de personalidad
-
-    Returns:
-        Tupla con (metadata_dict, metadata_string)
+    Crea metadatos validados según LiveKit 1.0.
     """
     metadata = {"io_mode": io_mode, "persona_id": persona_id}
     metadata_str = json.dumps(metadata)
@@ -189,21 +218,11 @@ def _create_access_token(
     identity: str, room: str, io_mode: str, persona_id: str, metadata_str: str
 ) -> str:
     """
-    Crea un AccessToken de LiveKit usando el patrón oficial.
-    ✅ FUNCIÓN SEPARADA: Reduce complejidad de get_token()
-
-    Args:
-        identity: Identidad del usuario
-        room: Nombre de la sala
-        io_mode: Modo de interacción
-        persona_id: ID de personalidad
-        metadata_str: String JSON de metadatos
-
-    Returns:
-        Token JWT generado
+    Crea un AccessToken de LiveKit 1.0 usando el patrón oficial.
+    ✅ ACTUALIZADO: Según documentación LiveKit 1.0
     """
     try:
-        # ✅ VIDEOGRANTS COMPLETO
+        # ✅ VIDEOGRANTS COMPLETO LIVEKIT 1.0
         grants = api.VideoGrants(
             room_join=True,
             room=room,
@@ -221,7 +240,7 @@ def _create_access_token(
             ingress_admin=False,
         )
 
-        # ✅ CONFIGURACIÓN DE TOKEN
+        # ✅ CONFIGURACIÓN DE TOKEN LIVEKIT 1.0
         token_builder = (
             api.AccessToken(api_key=API_KEY, api_secret=API_SECRET)
             .with_identity(identity)
@@ -232,22 +251,15 @@ def _create_access_token(
             .with_grants(grants)
         )
 
-        # ✅ INTENTO AGREGAR CONFIGURACIÓN DE AGENTE (si está disponible)
+        # ✅ AGENT DISPATCH LIVEKIT 1.0 (opcional)
         try:
-            # pylint: disable=no-member
-            room_config = api.RoomConfiguration(  # type: ignore[attr-defined]
-                agents=[
-                    api.RoomAgentDispatch(  # type: ignore[attr-defined]
-                        agent_name="monaquehabla", metadata=metadata_str
-                    )
-                ]
+            room_config = api.RoomConfiguration(
+                agents=[api.RoomAgentDispatch(agent_name="monaquehabla", metadata=metadata_str)]
             )
             token_builder = token_builder.with_room_config(room_config)
-            logger.debug("✅ RoomAgentDispatch configurado exitosamente")
+            logger.debug("✅ RoomAgentDispatch configurado para LiveKit 1.0")
         except (AttributeError, TypeError) as e:
-            logger.warning(
-                "⚠️ RoomConfiguration no disponible, continuando sin agent dispatch: %s", str(e)
-            )
+            logger.warning("⚠️ RoomConfiguration no disponible: %s", str(e))
 
         return token_builder.to_jwt()
 
@@ -259,17 +271,7 @@ def _create_access_token(
 def _save_session(
     user_id: str, token: str, room: str, identity: str, metadata: dict[str, str]
 ) -> None:
-    """
-    Guarda la sesión del usuario.
-    ✅ FUNCIÓN SEPARADA: Reduce complejidad de get_token()
-
-    Args:
-        user_id: ID del usuario
-        token: Token JWT generado
-        room: Nombre de la sala
-        identity: Identidad del usuario
-        metadata: Metadatos de la sesión
-    """
+    """Guarda la sesión del usuario."""
     active_sessions[user_id] = {
         "token": token,
         "room": room,
@@ -282,64 +284,50 @@ def _save_session(
 @app.route("/getToken", methods=["POST", "OPTIONS"])
 def get_token() -> Response:
     """
-    Genera y devuelve un token JWT para conectar a una sala de LiveKit.
-    ✅ REFACTORIZADO: Complejidad reducida de 13 a < 10
-
-    Request JSON:
-      - identity: str (opcional)
-      - user_id: str (opcional, pero recomendado)
-      - room: str (opcional, se genera automáticamente si no se proporciona)
-      - io_mode: str (opcional, valores: "text", "voice", "hybrid", por defecto "hybrid")
-      - persona_id: str (opcional, por defecto "rosalia")
-
-    Response JSON:
-      - url: WebSocket URL de LiveKit
-      - token: JWT de acceso
-      - room: Nombre de la sala asignada
-      - user_id: ID del usuario utilizado
-      - metadata: Metadatos incluidos en el token
+    Genera y devuelve un token JWT para conectar a una sala de LiveKit 1.0.
+    ✅ REFACTORIZADO: Complejidad reducida + LiveKit 1.0 patterns
     """
     # Manejar preflight OPTIONS
     if request.method == "OPTIONS":
         return _build_cors_preflight_response()
 
     try:
-        # ✅ VALIDACIÓN INICIAL (Complejidad: 1)
+        # ✅ VALIDACIÓN INICIAL
         data = request.get_json(silent=True)
         if not data:
             logger.warning("Solicitud sin JSON válido")
             abort(400, description="Se requiere un cuerpo JSON válido")
 
-        # ✅ VALIDAR Y EXTRAER DATOS (Complejidad: 1)
+        # ✅ VALIDAR Y EXTRAER DATOS
         identity, user_id, room, io_mode, persona_id = _validate_request_data(data)
 
-        # ✅ CREAR METADATOS (Complejidad: 1)
+        # ✅ CREAR METADATOS
         metadata, metadata_str = _create_metadata(io_mode, persona_id)
 
         logger.info(
-            "🎯 Configuración: user_id=%s, io_mode=%s, persona_id=%s", user_id, io_mode, persona_id
+            "🎯 Token request: user_id=%s, io_mode=%s, persona_id=%s", user_id, io_mode, persona_id
         )
 
-        # ✅ VERIFICAR TOKEN EXISTENTE (Complejidad: 1)
+        # ✅ VERIFICAR TOKEN EXISTENTE
         existing_token_response = _check_existing_token(user_id, room, io_mode, persona_id)
         if existing_token_response:
             return existing_token_response
 
-        # ✅ CREAR NUEVO TOKEN (Complejidad: 1)
+        # ✅ CREAR NUEVO TOKEN
         token = _create_access_token(identity, room, io_mode, persona_id, metadata_str)
 
-        # ✅ GUARDAR SESIÓN (Complejidad: 1)
+        # ✅ GUARDAR SESIÓN
         _save_session(user_id, token, room, identity, metadata)
 
         logger.info(
-            "✅ Nuevo token generado para %s en sala %s (io_mode=%s, persona=%s)",
+            "✅ Token generado para %s en sala %s (io_mode=%s, persona=%s)",
             user_id,
             room,
             io_mode,
             persona_id,
         )
 
-        # ✅ RESPONDER (Complejidad: 1)
+        # ✅ RESPONDER
         return _corsify_actual_response(
             jsonify(
                 url=LIVEKIT_URL,
@@ -380,7 +368,7 @@ def revoke_token() -> Response:
             logger.info("🗑️ Token revocado para usuario %s", user_id)
             return jsonify(success=True, message="Token revocado correctamente")
         else:
-            logger.warning("⚠️ Intento de revocar token para usuario inexistente: %s", user_id)
+            logger.warning("⚠️ Intento de revocar token inexistente: %s", user_id)
             return jsonify(success=False, message="No se encontró sesión activa")
 
     except (TypeError, ValueError, KeyError) as e:
@@ -429,16 +417,19 @@ def _corsify_actual_response(response: Response, status: int = 200) -> Response:
 @app.route("/health", methods=["GET"])
 def health() -> Response:
     """
-    Endpoint de health-check para verificar que el servicio esté activo.
+    Endpoint de health-check para Render.com.
     ✅ ACTUALIZADO: Con información de configuración
     """
     stats = {
+        "status": "ok",
         "active_sessions": len(active_sessions),
         "livekit_url": LIVEKIT_URL,
-        "bind_solution": "LiveKit escucha en 0.0.0.0:7880",
+        "livekit_version": "1.0.x",
+        "frontend_dir": str(FRONTEND_DIR),
+        "frontend_exists": FRONTEND_DIR.exists(),
         "agent_dispatch": "monaquehabla",
         "max_metadata_size": MAX_METADATA_SIZE,
-        "status": "ok",
+        "deployment": "render.com",
     }
     return jsonify(stats)
 
@@ -448,13 +439,17 @@ def system_info() -> Response:
     """Información del sistema para debugging."""
     try:
         info = {
-            "livekit_version": "1.0.x",
-            "python_sdk": "livekit-api",
-            "import_pattern": {
-                "correct": "from livekit import api",
-                "room_config": "api.RoomConfiguration",
-                "agent_dispatch": "api.RoomAgentDispatch",
-                "note": "Different from Node.js where they're in @livekit/protocol",
+            "deployment": {
+                "platform": "render.com",
+                "base_dir": str(BASE_DIR),
+                "frontend_dir": str(FRONTEND_DIR),
+                "frontend_exists": FRONTEND_DIR.exists(),
+            },
+            "livekit": {
+                "version": "1.0.x",
+                "python_sdk": "livekit-api",
+                "agents_framework": "livekit-agents~=1.0.19",
+                "url": LIVEKIT_URL,
             },
             "features": {
                 "video_grants_complete": True,
@@ -462,28 +457,13 @@ def system_info() -> Response:
                 "attributes_support": True,
                 "agent_dispatch": True,
                 "room_configuration": True,
-            },
-            "permissions": {
-                "can_update_own_metadata": True,
-                "room_join": True,
-                "can_publish": True,
-                "can_subscribe": True,
-                "can_publish_data": True,
+                "cors_enabled": True,
+                "relative_paths": True,
             },
             "limits": {
                 "metadata_max_size": MAX_METADATA_SIZE,
                 "attributes_max_size": MAX_ATTRIBUTES_SIZE,
                 "token_ttl_minutes": 10,
-            },
-            "refactoring": {
-                "complexity_before": 13,
-                "complexity_after": "< 10",
-                "functions_extracted": [
-                    "_validate_request_data",
-                    "_create_metadata",
-                    "_create_access_token",
-                    "_save_session",
-                ],
             },
         }
         return jsonify(info)
@@ -499,19 +479,15 @@ if __name__ == "__main__":
     except ValueError as exc:
         raise RuntimeError(f"Puerto inválido: {port_str}") from exc
 
-    logger.info("🚀 Iniciando servidor REFACTORIZADO en puerto %s", port)
+    logger.info("🚀 Iniciando Token Server CORREGIDO para Render.com")
     logger.info("🔗 LiveKit URL: %s", LIVEKIT_URL)
-    logger.info("💡 Solución: LiveKit bind 0.0.0.0 (sin URLs separadas)")
-    logger.info("✅ REFACTORING COMPLETADO:")
-    logger.info("  🔧 Complejidad get_token(): 13 → < 10")
-    logger.info("  📦 4 funciones extraídas para mejor organización")
-    logger.info("  🎯 Mantiene toda la funcionalidad original")
-    logger.info("🎯 Características habilitadas:")
-    logger.info("  ✅ VideoGrants completo con can_update_own_metadata")
-    logger.info("  ✅ Metadata + Attributes support")
-    logger.info("  ✅ RoomAgentDispatch (monaquehabla) desde api")
-    logger.info("  ✅ Validación de tamaños de metadata")
-    logger.info("  ✅ Reutilización de tokens")
+    logger.info("📁 Frontend Dir: %s", FRONTEND_DIR)
+    logger.info("✅ CORRECCIONES APLICADAS:")
+    logger.info("  🎯 Rutas relativas portables (Docker + Render.com)")
+    logger.info("  📏 Sin lazy formatting en logging (PEP 8)")
+    logger.info("  🔧 LiveKit 1.0 patterns oficiales")
+    logger.info("  🌐 CORS configurado correctamente")
+    logger.info("  📊 Health checks para Render.com")
 
-    app.run(host="0.0.0.0", port=port)  # noqa: S104
-    # app.run(host="0.0.0.0", port=port, use_reloader=True)
+    # ✅ BIND 0.0.0.0 para Render.com
+    app.run(host="0.0.0.0", port=port)
