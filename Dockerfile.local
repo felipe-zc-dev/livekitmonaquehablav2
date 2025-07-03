@@ -104,7 +104,7 @@ USER appuser
 # ✅ PRODUCTION HEALTH CHECK
 HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=5 \
     CMD curl -f http://localhost:${PORT:-8081}/health || exit 1
-
+RUN python agent.py download-files
 # ✅ EXPOSE HEALTH CHECK PORT
 EXPOSE 8081
 

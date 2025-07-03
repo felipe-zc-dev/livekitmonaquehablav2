@@ -11,7 +11,7 @@ from typing import Any
 from dotenv import load_dotenv
 from livekit.agents import AgentSession, JobContext, JobProcess, WorkerOptions, cli, metrics
 from livekit.agents.voice import MetricsCollectedEvent
-from livekit.plugins import aws, deepgram, silero
+from livekit.plugins import aws, deepgram, elevenlabs, silero
 
 from agents.conversational_agent import ConversationalMasterAgent
 from core.config import SystemConfig, UserData, create_user_data, load_persona_config
@@ -51,38 +51,38 @@ async def entrypoint(ctx: JobContext) -> None:
         # Crear agente conversacional
         agent = ConversationalMasterAgent(persona_id, persona_config)
         # ✅ AWS STT simple
-        tts_model = aws.TTS(
-            voice="Lucia",
-            speech_engine="generative",
-            language="es-ES",
-        )
-        # tts_model = elevenlabs.TTS(
-        #     # tu voz y modelo
-        #     voice_id=persona_config["voice_id"],
-        #     model="eleven_multilingual_v2",
-        #     # 1. Personalización de la voz
-        #     voice_settings=elevenlabs.VoiceSettings(
-        #         stability=0.8,
-        #         similarity_boost=0.7,
-        #         style=0.5,  #
-        #         use_speaker_boost=True,
-        #         speed=0.95,
-        #     ),
-        #     # 2. Idioma y codificación
-        #     encoding="mp3_44100_192",  # mp3_22050_32
-        #     # 3. Streaming y chunks
-        #     streaming_latency=2,
-        #     chunk_length_schedule=[
-        #         100,
-        #         200,
-        #         300,
-        #         400,
-        #     ],  # chunks más grandes reducen overhead :contentReference[oaicite:8]{index=8}
-        #     # 4. SSML y pronunciación
-        #     enable_ssml_parsing=True,
-        #     # 5. Timeout y gestión de conexiones
-        #     # inactivity_timeout=120,  # cierra la conexión tras 2 min de inactividad
+        # tts_model = aws.TTS(
+        #     voice="Lucia",
+        #     speech_engine="generative",
+        #     language="es-ES",
         # )
+        tts_model = elevenlabs.TTS(
+            # tu voz y modelo
+            voice_id=persona_config["voice_id"],
+            model="eleven_multilingual_v2",
+            # 1. Personalización de la voz
+            voice_settings=elevenlabs.VoiceSettings(
+                stability=0.8,
+                similarity_boost=0.7,
+                style=0.5,  #
+                use_speaker_boost=True,
+                speed=0.95,
+            ),
+            # 2. Idioma y codificación
+            encoding="mp3_44100_192",  # mp3_22050_32
+            # 3. Streaming y chunks
+            streaming_latency=2,
+            chunk_length_schedule=[
+                100,
+                200,
+                300,
+                400,
+            ],  # chunks más grandes reducen overhead :contentReference[oaicite:8]{index=8}
+            # 4. SSML y pronunciación
+            enable_ssml_parsing=True,
+            # 5. Timeout y gestión de conexiones
+            # inactivity_timeout=120,  # cierra la conexión tras 2 min de inactividad
+        )
 
         # Configurar sesión optimizada
         session: AgentSession[UserData] = AgentSession(

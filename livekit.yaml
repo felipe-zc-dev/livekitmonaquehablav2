@@ -10,6 +10,3 @@ rtc:
   use_external_ip: false
   enable_loopback_candidate: true
   allow_tcp_fallback: true
-
-keys:
-  devkey: secret
