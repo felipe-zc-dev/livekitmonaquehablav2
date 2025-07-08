@@ -167,7 +167,7 @@ async def entrypoint(ctx: JobContext) -> None:
             room=ctx.room,
             room_output_options=RoomOutputOptions(
                 # Disable audio output to the room. The avatar plugin publishes audio separately.
-                audio_enabled=False,
+                audio_enabled=True,
             ),
         )
         logger.info("🎉 Sesión iniciada exitosamente")
