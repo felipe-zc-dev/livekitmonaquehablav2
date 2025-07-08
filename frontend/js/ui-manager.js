@@ -1068,6 +1068,184 @@ class UIManager {
         }
     }
 
+    /**
+     * Configura el handler para el botón de video (voice + video)
+     * @private
+     */
+    _setupVideoButtonHandler() {
+        // Buscar botón de video en el header
+        const videoCameraBtn = document.getElementById("videoCameraBtn");
+
+        if (!videoCameraBtn) {
+            if (CONFIG.debug.showUIEvents) {
+                console.warn(
+                    "🎨 Botón de video (videoCameraBtn) no encontrado en DOM"
+                );
+            }
+            return;
+        }
+
+        /**
+         * Handler para botón de video (activa voice + video juntos)
+         */
+        const handleVideoToggle = () => {
+            try {
+                if (CONFIG.debug.showUIEvents) {
+                    console.log("🎨 Botón de video presionado (voice + video)");
+                }
+
+                // Verificar estado actual del video
+                const isVideoActive =
+                    window.videoCallManager?.isActive || false;
+
+                if (CONFIG.debug.showUIEvents) {
+                    console.log("🎨 Estado actual video:", isVideoActive);
+                }
+
+                // Prevenir doble clic
+                if (videoCameraBtn.disabled) {
+                    if (CONFIG.debug.showUIEvents) {
+                        console.log(
+                            "🎨 Botón de video deshabilitado temporalmente"
+                        );
+                    }
+                    return;
+                }
+
+                // Feedback visual inmediato
+                videoCameraBtn.disabled = true;
+                setTimeout(() => {
+                    videoCameraBtn.disabled = false;
+                }, 1000); // 1 segundo de debounce
+
+                // ✅ Emitir evento videoToggle (NO voiceToggle)
+                this._emitUIEvent("videoToggle", {
+                    currentState: isVideoActive,
+                    requestedAction: isVideoActive ? "end" : "start",
+                    timestamp: Date.now(),
+                });
+
+                if (CONFIG.debug.showUIEvents) {
+                    console.log(
+                        "✅ Evento videoToggle emitido al orquestador (app.js)"
+                    );
+                }
+            } catch (error) {
+                console.error("❌ Error en handler del botón de video:", error);
+                videoCameraBtn.disabled = false;
+                this.showToast("Error en videollamada", "error", 3000);
+            }
+        };
+
+        // Agregar event listener
+        videoCameraBtn.addEventListener("click", handleVideoToggle);
+
+        // Guardar referencia para cleanup
+        this._eventHandlers.set("videoCameraBtn", handleVideoToggle);
+
+        if (CONFIG.debug.showUIEvents) {
+            console.log("🎨 Handler de botón de video configurado");
+        }
+    }
+
+    /**
+     * Actualiza el estado del botón de video según el estado de la videollamada
+     * @param {boolean} isActive - Si hay videollamada activa
+     * @param {boolean} isConnected - Si el avatar está conectado
+     */
+    updateVideoCallState(isActive, isConnected = false) {
+        try {
+            const videoCameraBtn = document.getElementById("videoCameraBtn");
+
+            if (!videoCameraBtn) return;
+
+            if (isActive) {
+                videoCameraBtn.classList.add("active");
+                videoCameraBtn.title = "Terminar videollamada";
+                videoCameraBtn.setAttribute(
+                    "aria-label",
+                    "Terminar videollamada"
+                );
+            } else {
+                videoCameraBtn.classList.remove("active");
+                videoCameraBtn.title = "Iniciar videollamada con avatar";
+                videoCameraBtn.setAttribute(
+                    "aria-label",
+                    "Iniciar videollamada"
+                );
+            }
+
+            // También actualizar estado de voz si video está activo
+            if (isActive) {
+                this.state.isVoiceMode = true;
+            }
+
+            if (CONFIG.debug.showUIEvents) {
+                console.log(
+                    `🎨 Estado videollamada actualizado: activo=${isActive}, conectado=${isConnected}`
+                );
+            }
+        } catch (error) {
+            console.error(
+                "❌ Error actualizando estado de videollamada:",
+                error
+            );
+        }
+    }
+
+    /**
+     * Obtiene el estado actual de la UI de video
+     * @returns {Object} Estado de la UI de video
+     */
+    getVideoUIState() {
+        const videoCameraBtn = document.getElementById("videoCameraBtn");
+
+        return {
+            videoBtnExists: !!videoCameraBtn,
+            videoBtnActive:
+                videoCameraBtn?.classList.contains("active") || false,
+            videoCallManagerAvailable:
+                typeof window.videoCallManager !== "undefined",
+            videoCallActive: window.videoCallManager?.isActive || false,
+            voiceMode: this.state.isVoiceMode || false,
+        };
+    }
+
+    /**
+     * Fuerza un estado de video para testing (solo en debug)
+     * @param {boolean} isActive - Si video está activo
+     * @param {boolean} isConnected - Si avatar está conectado
+     */
+    debugSetVideoState(isActive, isConnected = false) {
+        if (!CONFIG.debug.enabled) {
+            console.warn("🎨 debugSetVideoState solo disponible en modo debug");
+            return;
+        }
+
+        try {
+            this.updateVideoCallState(isActive, isConnected);
+
+            if (isConnected) {
+                this.updateStatus("Avatar conectado", "connected");
+                this.showToast("DEBUG: Avatar conectado", "success", 2000);
+            } else if (isActive) {
+                this.updateStatus("Conectando avatar...", "connecting");
+                this.showToast("DEBUG: Video activo", "info", 2000);
+            } else {
+                this.updateStatus("Video desconectado", "disconnected");
+                this.showToast("DEBUG: Video inactivo", "warning", 2000);
+            }
+
+            console.log("🎨 Estado de video forzado:", {
+                isActive,
+                isConnected,
+            });
+            console.log("🎨 Estado UI actual:", this.getVideoUIState());
+        } catch (error) {
+            console.error("❌ Error en debugSetVideoState:", error);
+        }
+    }
+
     // ==========================================
     // MÉTODOS SIN CAMBIOS (copy from original)
     // ==========================================

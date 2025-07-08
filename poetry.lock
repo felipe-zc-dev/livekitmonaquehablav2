@@ -1843,6 +1843,7 @@ livekit-plugins-deepgram = {version = ">=1.0.19", optional = true, markers = "ex
 livekit-plugins-elevenlabs = {version = ">=1.0.19", optional = true, markers = "extra == \"elevenlabs\""}
 livekit-plugins-openai = {version = ">=1.0.19", optional = true, markers = "extra == \"openai\""}
 livekit-plugins-silero = {version = ">=1.0.19", optional = true, markers = "extra == \"silero\""}
+livekit-plugins-tavus = {version = ">=1.0.19", optional = true, markers = "extra == \"tavus\""}
 livekit-plugins-turn-detector = {version = ">=1.0.19", optional = true, markers = "extra == \"turn-detector\""}
 livekit-protocol = ">=1.0,<2.0"
 nest-asyncio = ">=1.6.0"
@@ -2005,6 +2006,21 @@ files = [
 livekit-agents = ">=1.0.19"
 numpy = ">=1.26"
 onnxruntime = ">=1.18"
+
+[[package]]
+name = "livekit-plugins-tavus"
+version = "1.0.19"
+description = "Agent Framework plugin for Tavus"
+optional = false
+python-versions = ">=3.9.0"
+groups = ["main"]
+files = [
+    {file = "livekit_plugins_tavus-1.0.19-py3-none-any.whl", hash = "sha256:b2f797e281c9e8ff64d45d5b9a7f06515826f38105f948bd87f34fb1d38c2ebc"},
+    {file = "livekit_plugins_tavus-1.0.19.tar.gz", hash = "sha256:344bf2a11ef79c4bda083e9666c8827e58ab5aee56b75e6033a0b19aaee04fdc"},
+]
+
+[package.dependencies]
+livekit-agents = ">=1.0.19"
 
 [[package]]
 name = "livekit-plugins-turn-detector"
@@ -4644,4 +4660,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "30c6b14cae094ecc0a5923428c4cc21bff4a99e2190ffb5ff0f95cf504ce4e20"
+content-hash = "d029ffc5a2bd69ee8387051a01626d7831ab736a1a082ca113bffde87e5c3256"

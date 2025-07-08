@@ -167,7 +167,8 @@ class VoiceAgentApp {
 
                 // 3. DESPUÉS inicializar agente (ya con listeners configurados)
                 await this._initializeVoiceAgent();
-                await this._initializeVoiceCallManager();
+                // await this._initializeVoiceCallManager();
+                await this._initializeVideoCallManager();
 
                 // 4. Conectar componentes
                 this._connectComponents();
@@ -265,6 +266,7 @@ class VoiceAgentApp {
             "llmFunctionCall",
             this._handleRPCFunctionCall.bind(this)
         );
+
         this._components.agent.on(
             "agentCommand",
             this._handleAgentCommand.bind(this)
@@ -932,6 +934,94 @@ class VoiceAgentApp {
             this._components.ui.updateStatus("Mensaje enviado", "connected");
             this._components.ui.showToast("Mensaje enviado", "success", 1000);
         });
+
+        this._components.agent.on("avatarWorkerConnected", (participant) => {
+            Logger.success("🎭 Avatar Worker conectado:", participant.identity);
+
+            this._components.ui.updateStatus(
+                "Avatar conectado - Video disponible",
+                "connected"
+            );
+
+            this._components.ui.showToast(
+                `🎭 Avatar conectado: ${participant.identity}`,
+                "success",
+                4000
+            );
+
+            // ✅ NOTIFICAR: VideoCallManager si está disponible
+            if (this._components.videoCallManager) {
+                this._components.videoCallManager._emit(
+                    "avatarWorkerReady",
+                    participant
+                );
+            }
+        });
+
+        this._components.agent.on("avatarWorkerDisconnected", (participant) => {
+            Logger.warning(
+                "🎭 Avatar Worker desconectado:",
+                participant.identity
+            );
+
+            this._components.ui.updateStatus("Avatar desconectado", "warning");
+
+            this._components.ui.showToast(
+                `🎭 Avatar desconectado: ${participant.identity}`,
+                "warning",
+                3000
+            );
+        });
+
+        this._components.agent.on(
+            "avatarVideoTrackReceived",
+            (track, publication) => {
+                Logger.success("🎬 Video track del avatar recibido");
+
+                this._components.ui.updateStatus(
+                    "Video avatar activo",
+                    "connected"
+                );
+
+                this._components.ui.showToast(
+                    "🎬 Video del avatar disponible",
+                    "success",
+                    3000
+                );
+
+                // ✅ DELEGAR: Al VideoCallManager para renderizar
+                if (this._components.videoCallManager) {
+                    this._components.videoCallManager.handleAvatarVideo(
+                        track,
+                        publication
+                    );
+                }
+
+                // ✅ MÉTRICAS: Tracking de video avatar
+                if (CONFIG.debug.showLatencyMetrics) {
+                    Logger.performance(
+                        "⚡ Avatar video track procesado exitosamente"
+                    );
+                }
+            }
+        );
+
+        this._components.agent.on("avatarVideoMuted", (isMuted) => {
+            const status = isMuted ? "muted" : "unmuted";
+            Logger.debug(`🎭 Avatar video ${status}`);
+
+            this._components.ui.showToast(
+                `🎭 Video avatar ${status}`,
+                "info",
+                2000
+            );
+        });
+
+        this._components.agent.on("avatarAttributesChanged", (changed) => {
+            if (CONFIG.debug.enabled) {
+                Logger.debug("🎭 Avatar attributes changed:", changed);
+            }
+        });
     }
 
     /**
@@ -959,6 +1049,198 @@ class VoiceAgentApp {
     }
 
     /**
+     * Inicializa el gestor de videollamadas con avatar
+     * @private
+     */
+    async _initializeVideoCallManager() {
+        try {
+            // Verificar que videoCallManager esté disponible globalmente
+            if (typeof window.videoCallManager !== "undefined") {
+                this._components.videoCallManager = window.videoCallManager;
+
+                // Conectar eventos del video call manager
+                this._connectVideoCallEvents();
+
+                Logger.debug("VideoCallManager conectado");
+            } else {
+                Logger.debug(
+                    "VideoCallManager no disponible, continuando sin él"
+                );
+            }
+        } catch (error) {
+            Logger.debug(
+                "Error inicializando VideoCallManager:",
+                error.message
+            );
+            // No es crítico, continuar sin él
+        }
+    }
+    /**
+     * Conecta eventos del video call manager
+     * @private
+     */
+    _connectVideoCallEvents() {
+        if (!this._components.videoCallManager) return;
+
+        // Video call iniciado
+        this._components.videoCallManager.on("videoCallStarted", () => {
+            Logger.debug("Videollamada iniciada");
+            this._components.ui.updateStatus(
+                "Videollamada activa",
+                "connected"
+            );
+        });
+
+        // Video call terminado
+        this._components.videoCallManager.on("videoCallEnded", () => {
+            Logger.debug("Videollamada terminada");
+            this._components.ui.updateStatus(
+                "Videollamada finalizada",
+                "disconnected"
+            );
+        });
+
+        // Avatar activado
+        this._components.videoCallManager.on("avatarActivated", (provider) => {
+            Logger.debug(`Avatar ${provider} activado`);
+            this._components.ui.showToast(
+                `Avatar ${provider} conectado`,
+                "success",
+                3000
+            );
+        });
+
+        // Errores de video
+        this._components.videoCallManager.on("videoCallError", (error) => {
+            Logger.error("Error en videollamada:", error);
+            this._components.ui.showToast(
+                `Error de video: ${error}`,
+                "error",
+                5000
+            );
+        });
+
+        this._components.videoCallManager.on(
+            "avatarActivationRequested",
+            (data) => {
+                Logger.info(
+                    "🎭 Solicitud de activación de avatar recibida:",
+                    data.provider
+                );
+
+                // ✅ DELEGAR: Al agente para activar avatar
+                this._activateAvatar(data.provider)
+                    .then((avatarInfo) => {
+                        // ✅ NOTIFICAR: VideoCallManager del éxito
+                        this._components.videoCallManager.handleAvatarActivated(
+                            data.provider,
+                            avatarInfo
+                        );
+
+                        // ✅ UI: Toast de confirmación
+                        this._components.ui.showToast(
+                            `🎭 Avatar ${data.provider} activado exitosamente`,
+                            "success",
+                            4000
+                        );
+                    })
+                    .catch((error) => {
+                        Logger.error("❌ Error activando avatar:", error);
+
+                        // ✅ NOTIFICAR: VideoCallManager del error
+                        this._components.videoCallManager.handleAvatarError(
+                            error
+                        );
+
+                        // ✅ UI: Toast de error
+                        this._components.ui.showToast(
+                            `❌ Error activando avatar: ${error.message}`,
+                            "error",
+                            5000
+                        );
+                    });
+            }
+        );
+        // Avatar activation listener
+        this._components.videoCallManager.on(
+            "avatarActivationRequested",
+            async (data) => {
+                try {
+                    console.log(
+                        "🎭 Procesando solicitud de activación de avatar:",
+                        data.provider
+                    );
+
+                    // ✅ ENVIAR: RPC al agente Python
+                    const result = await this._components.agent.sendRPC(
+                        "activate_avatar",
+                        {
+                            provider: data.provider,
+                            timestamp: data.timestamp,
+                        }
+                    );
+
+                    // ✅ RESPONDER: Al VideoCallManager
+                    this._components.videoCallManager.handleAvatarActivationResponse(
+                        data.provider,
+                        result
+                    );
+
+                    // ✅ UI: Toast
+                    if (result && result.success) {
+                        this._components.ui.showToast(
+                            `🎭 Avatar ${data.provider} activado`,
+                            "success",
+                            3000
+                        );
+                    } else {
+                        this._components.ui.showToast(
+                            `❌ Error activando avatar`,
+                            "error",
+                            4000
+                        );
+                    }
+                } catch (error) {
+                    console.error("❌ Error en avatar activation:", error);
+
+                    // ✅ NOTIFICAR: Error al VideoCallManager
+                    this._components.videoCallManager.handleAvatarActivationResponse(
+                        data.provider,
+                        {
+                            success: false,
+                            error: error.message,
+                        }
+                    );
+
+                    this._components.ui.showToast(
+                        `❌ Error activando avatar: ${error.message}`,
+                        "error",
+                        5000
+                    );
+                }
+            }
+        );
+
+        // Avatar deactivation listener
+        this._components.videoCallManager.on(
+            "avatarDeactivationRequested",
+            async (data) => {
+                try {
+                    console.log("🎭 Desactivando avatar...");
+
+                    // ✅ ENVIAR: RPC al agente Python
+                    await this._components.agent.sendRPC("deactivate_avatar", {
+                        timestamp: data.timestamp,
+                    });
+
+                    console.log("✅ Avatar desactivado");
+                } catch (error) {
+                    console.error("❌ Error desactivando avatar:", error);
+                }
+            }
+        );
+    }
+    /**
      * ✅ MANTENIDO: Conecta los componentes principales (100% compatible)
      * @private
      */
@@ -975,6 +1257,15 @@ class VoiceAgentApp {
                 Logger.debug(
                     "VoiceCallManager configurado en modo Character.AI"
                 );
+            }
+
+            // Conectar video call manager con voice agent
+            if (this._components.videoCallManager && this._components.agent) {
+                // Asegurar que video manager tenga referencia al agent
+                this._components.videoCallManager._voiceAgent =
+                    this._components.agent;
+
+                Logger.debug("VideoCallManager conectado con VoiceAgent");
             }
         } catch (error) {
             Logger.error("Error conectando componentes:", error);
@@ -1471,6 +1762,50 @@ class VoiceAgentApp {
                 this._components.ui.showToast(
                     "Error reproduciendo mensaje",
                     "error"
+                );
+            }
+        });
+
+        // ✅ NUEVO: Handler para botón de video (voice + video juntos)
+        this._components.ui.on("videoToggle", async () => {
+            try {
+                Logger.debug("🎨 UI evento: videoToggle recibido");
+
+                // Verificar si video está activo
+                const isVideoActive =
+                    window.videoCallManager?.isActive || false;
+
+                if (isVideoActive) {
+                    // Terminar videollamada
+                    await window.videoCallManager.endVideoCall();
+                    Logger.debug("📹 Videollamada terminada vía UI");
+                } else {
+                    // Iniciar videollamada
+                    if (window.videoCallManager) {
+                        await window.videoCallManager.startVideoCall();
+                        Logger.debug("📹 Videollamada iniciada vía UI");
+                    } else {
+                        // Fallback: solo activar voz si no hay VideoCallManager
+                        Logger.warn(
+                            "VideoCallManager no disponible, activando solo voz"
+                        );
+                        if (
+                            !this._components.agent.getState().voiceModeActive
+                        ) {
+                            await this._components.agent.enableVoiceMode();
+                            this._components.ui.updateStatus(
+                                "Modo voz activo",
+                                "connected"
+                            );
+                        }
+                    }
+                }
+            } catch (error) {
+                Logger.error("❌ Error en videoToggle:", error);
+                this._components.ui.showToast(
+                    "Error en videollamada",
+                    "error",
+                    3000
                 );
             }
         });
@@ -2088,6 +2423,237 @@ class VoiceAgentApp {
         }
     }
 
+    // ========================================
+    // EVENTOS DE AVATAR WORKERS
+    // ========================================
+
+    /**
+     * Conecta VideoCallManager con VoiceAgent para avatar workers
+     * @private
+     */
+    async _connectVideoCallManager() {
+        try {
+            // Verificar que VideoCallManager esté disponible
+            if (
+                typeof window.VideoCallManager === "undefined" ||
+                !window.videoCallManager
+            ) {
+                Logger.debug(
+                    "VideoCallManager no disponible, omitiendo integración de video"
+                );
+                return;
+            }
+
+            // Verificar que VoiceAgent esté disponible
+            if (!this._components.agent) {
+                Logger.debug(
+                    "VoiceAgent no disponible para conectar con VideoCallManager"
+                );
+                return;
+            }
+
+            // ✅ CONECTAR VideoCallManager con VoiceAgent
+            window.videoCallManager.connectVoiceAgent(this._components.agent);
+
+            // ✅ Escuchar eventos específicos del VoiceAgent para avatar workers
+            this._setupAvatarWorkerEventListeners();
+
+            // ✅ Escuchar eventos del VideoCallManager
+            this._setupVideoCallEventListeners();
+
+            Logger.debug(
+                "✅ VideoCallManager conectado con VoiceAgent para avatar workers"
+            );
+        } catch (error) {
+            Logger.debug("Error conectando VideoCallManager:", error.message);
+            // No es crítico, continuar sin video call
+        }
+    }
+
+    /**
+     * Configura listeners para eventos de avatar workers del VoiceAgent
+     * @private
+     */
+    _setupAvatarWorkerEventListeners() {
+        // Avatar worker conectado
+        this._components.agent.on("avatarWorkerConnected", (data) => {
+            const { avatarIdentity, agentIdentity } = data;
+            Logger.debug(
+                `🎭 Avatar worker conectado: ${avatarIdentity} para agente: ${agentIdentity}`
+            );
+
+            // Notificar al usuario
+            this._components.ui.showToast(
+                "Avatar digital conectado",
+                "success",
+                2000
+            );
+            this._components.ui.updateStatus("Avatar listo", "connected");
+        });
+
+        // Avatar worker desconectado
+        this._components.agent.on("avatarWorkerDisconnected", (data) => {
+            const { avatarIdentity } = data;
+            Logger.debug(`🎭 Avatar worker desconectado: ${avatarIdentity}`);
+
+            this._components.ui.showToast(
+                "Avatar desconectado",
+                "warning",
+                2000
+            );
+            this._components.ui.updateStatus(
+                "Reconectando avatar...",
+                "connecting"
+            );
+        });
+
+        // Video del avatar listo
+        this._components.agent.on("avatarVideoTrackReady", (data) => {
+            const { participant } = data;
+            Logger.debug(`📹 Video del avatar listo: ${participant.identity}`);
+
+            this._components.ui.updateStatus(
+                "Video del avatar activo",
+                "connected"
+            );
+        });
+
+        Logger.debug("✅ Event listeners de avatar workers configurados");
+    }
+
+    /**
+     * Configura listeners para eventos del VideoCallManager
+     * @private
+     */
+    _setupVideoCallEventListeners() {
+        // Usuario inicia videollamada
+        document.addEventListener("videoCallStart", async (event) => {
+            try {
+                const { timestamp, withUserCamera } = event.detail;
+                Logger.debug("📹 Usuario inició videollamada", {
+                    withUserCamera,
+                });
+
+                // ✅ ACTIVAR MODO DE VOZ si no está activo
+                if (!this._components.agent.getState().voiceModeActive) {
+                    this._components.ui.updateStatus(
+                        "Activando voz + video...",
+                        "connecting"
+                    );
+                    await this._components.agent.enableVoiceMode();
+                    Logger.debug("✅ Modo de voz activado por videollamada");
+                }
+
+                // Actualizar UI para mostrar estado de videollamada
+                this._components.ui.updateStatus(
+                    "Videollamada iniciada",
+                    "connected"
+                );
+                this._components.ui.showToast(
+                    "Conectando con avatar...",
+                    "info",
+                    3000
+                );
+            } catch (error) {
+                Logger.error("❌ Error iniciando videollamada:", error);
+                this._components.ui.showToast(
+                    "Error conectando videollamada",
+                    "error",
+                    3000
+                );
+            }
+        });
+
+        // Usuario termina videollamada
+        document.addEventListener("videoCallEnd", async (event) => {
+            try {
+                const { duration } = event.detail;
+                const durationSec = Math.floor(duration / 1000);
+                Logger.debug(
+                    `📹 Videollamada terminada (duración: ${durationSec}s)`
+                );
+
+                // ✅ DESACTIVAR MODO DE VOZ
+                if (this._components.agent.getState().voiceModeActive) {
+                    await this._components.agent.disableVoiceMode();
+                    Logger.debug("✅ Modo de voz desactivado");
+                }
+
+                // Actualizar UI para volver al chat de texto
+                this._components.ui.updateStatus(
+                    "Videollamada finalizada",
+                    "connected"
+                );
+                this._components.ui.showToast(
+                    `Llamada finalizada (${durationSec}s)`,
+                    "success",
+                    2000
+                );
+            } catch (error) {
+                Logger.error("❌ Error terminando videollamada:", error);
+            }
+        });
+
+        // Avatar video renderizado exitosamente
+        document.addEventListener("avatarVideoRendered", (event) => {
+            const { trackId, dimensions } = event.detail;
+            Logger.debug(
+                `🎭 Avatar video renderizado: ${dimensions.width}x${dimensions.height}`
+            );
+
+            this._components.ui.showToast(
+                "¡Avatar digital activo!",
+                "success",
+                3000
+            );
+            this._components.ui.updateStatus("Avatar en vivo", "connected");
+        });
+
+        // Avatar worker conectado desde VideoCallManager
+        document.addEventListener("avatarWorkerConnected", (event) => {
+            const { avatarIdentity, agentIdentity } = event.detail;
+            Logger.debug(
+                `🎭 Avatar worker conectado vía VideoCallManager: ${avatarIdentity}`
+            );
+        });
+
+        Logger.debug("✅ Event listeners de VideoCallManager configurados");
+    }
+
+    /**
+     * Obtiene el estado completo de video call para debugging
+     * @returns {Object} Estado completo
+     */
+    getVideoCallState() {
+        if (!this._components.videoCallManager || !this._components.agent) {
+            console.log("❌ Componentes no disponibles");
+            return;
+        }
+
+        const agent = this._components.agent;
+        const videoManager = this._components.videoCallManager;
+
+        console.log("🎭 AVATAR DEBUG STATE:", {
+            // Voice Agent state
+            agentConnected: agent._state.connected,
+            voiceModeActive: agent._state.voiceModeActive,
+
+            // Avatar detection
+            agentPrincipal: agent._detectAgentPrincipal()?.identity,
+            avatarWorker: agent._detectAvatarWorker()?.identity,
+            avatarVideoTrack: !!agent.getAvatarVideoTrack(),
+            isAvatarActive: agent.isAvatarActive(),
+
+            // Video Manager state
+            videoCallActive: videoManager._state.isActive,
+            avatarState: videoManager._avatarState,
+
+            // UI elements
+            videoBtnExists: !!document.getElementById("videoCameraBtn"),
+            avatarVideoExists: !!document.getElementById("avatar-video"),
+        });
+    }
+
     // ==========================================
     // MÉTODOS PÚBLICOS (APIs mantenidas para compatibilidad)
     // ==========================================
@@ -2266,6 +2832,18 @@ class VoiceAgentApp {
             if (this._rpcHandlers) {
                 this._rpcHandlers.clear();
             }
+            // Cleanup del VideoCallManager
+            if (window.videoCallManager) {
+                try {
+                    window.videoCallManager.cleanup();
+                    Logger.debug("VideoCallManager limpiado");
+                } catch (error) {
+                    Logger.debug(
+                        "Error limpiando VideoCallManager:",
+                        error.message
+                    );
+                }
+            }
             Logger.debug(
                 "Cleanup de aplicación completado usando CONFIG truth source"
             );
@@ -2273,7 +2851,69 @@ class VoiceAgentApp {
             Logger.error("Error durante cleanup:", error);
         }
     }
+    /**
+     * ✅ NUEVO: Activa avatar a través del agente
+     *
+     * Método de orquestación que maneja la activación de avatars
+     * sin exponer directamente el agente a otros componentes.
+     *
+     * @param {string} provider - Proveedor del avatar (tavus, hedra, etc.)
+     * @returns {Promise<Object>} Información del avatar activado
+     * @private
+     */
+    async _activateAvatar(provider = "tavus") {
+        try {
+            if (!this._components.agent) {
+                throw new Error("Agente no disponible para activar avatar");
+            }
 
+            Logger.info(`🎭 Activando avatar provider: ${provider}`);
+
+            // ✅ ENVIAR: Comando al agente Python para activar avatar
+            const result = await this._components.agent.sendRPC(
+                "activate_avatar",
+                {
+                    provider: provider,
+                    timestamp: Date.now(),
+                }
+            );
+
+            if (result && result.success) {
+                Logger.success("🎭 Avatar activado exitosamente via RPC");
+                return {
+                    provider: provider,
+                    activated: true,
+                    timestamp: Date.now(),
+                };
+            } else {
+                throw new Error(result?.message || "Avatar activation failed");
+            }
+        } catch (error) {
+            Logger.error("❌ Error en _activateAvatar:", error);
+
+            // ✅ FALLBACK: Si RPC falla, intentar con comando de datos
+            try {
+                const fallbackData = {
+                    command: "activate_avatar",
+                    provider: provider,
+                    timestamp: Date.now(),
+                };
+
+                await this._components.agent.sendData(fallbackData);
+
+                Logger.info("🎭 Avatar activation enviado via Data (fallback)");
+                return {
+                    provider: provider,
+                    activated: true,
+                    fallback: true,
+                    timestamp: Date.now(),
+                };
+            } catch (fallbackError) {
+                Logger.error("❌ Fallback también falló:", fallbackError);
+                throw new Error(`Avatar activation failed: ${error.message}`);
+            }
+        }
+    }
     // ==========================================
     // 🔧 RPC FUNCTION CALL HANDLER
     // ==========================================
@@ -2818,6 +3458,42 @@ document.addEventListener("DOMContentLoaded", async () => {
             Logger.debug(
                 `  • Modo de Conversación: ${CONFIG.ui.call.conversationMode}`
             );
+            window.debugAvatar = () => {
+                if (window.app) {
+                    window.app.debugAvatarState();
+                } else {
+                    console.log("❌ App no disponible");
+                }
+            };
+
+            window.activateAvatar = async (provider = "tavus") => {
+                if (window.app?._components?.agent) {
+                    return await window.app._components.agent.activateAvatar(
+                        provider
+                    );
+                } else {
+                    console.log("❌ Voice agent no disponible");
+                    return false;
+                }
+            };
+
+            window.toggleVideoCall = async () => {
+                if (window.app?._components?.videoCallManager) {
+                    const vm = window.app._components.videoCallManager;
+                    if (!vm._state.isActive) {
+                        await vm.startVideoCall();
+                    } else {
+                        await vm.toggleAvatar();
+                    }
+                } else {
+                    console.log("❌ Video call manager no disponible");
+                }
+            };
+
+            console.log("🎮 Avatar debug functions available:");
+            console.log("  - debugAvatar()");
+            console.log("  - activateAvatar('tavus')");
+            console.log("  - toggleVideoCall()");
         }
     } catch (error) {
         Logger.error(

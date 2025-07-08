@@ -9,9 +9,17 @@ import logging
 from typing import Any
 
 from dotenv import load_dotenv
-from livekit.agents import AgentSession, JobContext, JobProcess, WorkerOptions, cli, metrics
+from livekit.agents import (
+    AgentSession,
+    JobContext,
+    JobProcess,
+    RoomOutputOptions,
+    WorkerOptions,
+    cli,
+    metrics,
+)
 from livekit.agents.voice import MetricsCollectedEvent
-from livekit.plugins import aws, deepgram, elevenlabs, silero
+from livekit.plugins import aws, deepgram, elevenlabs, silero, tavus
 
 from agents.conversational_agent import ConversationalMasterAgent
 from core.config import SystemConfig, UserData, create_user_data, load_persona_config
@@ -69,7 +77,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 speed=0.95,
             ),
             # 2. Idioma y codificación
-            encoding="mp3_44100_192",  # mp3_22050_32
+            encoding="mp3_22050_32",  # mp3_22050_32
             # 3. Streaming y chunks
             streaming_latency=2,
             chunk_length_schedule=[
@@ -79,7 +87,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 400,
             ],  # chunks más grandes reducen overhead :contentReference[oaicite:8]{index=8}
             # 4. SSML y pronunciación
-            enable_ssml_parsing=True,
+            enable_ssml_parsing=False,
             # 5. Timeout y gestión de conexiones
             # inactivity_timeout=120,  # cierra la conexión tras 2 min de inactividad
         )
@@ -132,6 +140,13 @@ async def entrypoint(ctx: JobContext) -> None:
             max_endpointing_delay=1.5,
             max_tool_steps=2,
         )
+        # 🎭 CREAR AVATAR TAVUS PRIMERO
+        try:
+            avatar = tavus.AvatarSession(replica_id="r9c55f9312fb", persona_id="pb4c3a46bb80")
+            await avatar.start(session, room=ctx.room)
+            print("🎭 Avatar Tavus activado automáticamente")
+        except Exception as e:
+            print(f"❌ Error activando avatar: {e}")
 
         # Configurar métricas
         monitor = get_monitor()
@@ -147,7 +162,14 @@ async def entrypoint(ctx: JobContext) -> None:
         # ✅ CONFIGURAR AUDIO REPLAY - CORREGIDO
         await setup_audio_replay_integration(ctx, session)
         # Iniciar sesión
-        await session.start(agent=agent, room=ctx.room)
+        await session.start(
+            agent=agent,
+            room=ctx.room,
+            room_output_options=RoomOutputOptions(
+                # Disable audio output to the room. The avatar plugin publishes audio separately.
+                audio_enabled=False,
+            ),
+        )
         logger.info("🎉 Sesión iniciada exitosamente")
 
     except Exception as e:

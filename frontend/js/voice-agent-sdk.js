@@ -87,6 +87,13 @@ class ModernVoiceAgent {
         this._agentParticipant = null;
 
         /**
+         * Avatar worker participant (Tavus/avatar provider)
+         * @type {RemoteParticipant|null}
+         * @private
+         */
+        this._avatarWorker = null;
+
+        /**
          * Estado interno del agente
          * @type {Object}
          * @private
@@ -105,6 +112,8 @@ class ModernVoiceAgent {
             // Estados de agente
             agentConnected: false,
             voiceModeActive: false,
+            avatarConnected: false,
+            avatarVideoEnabled: false,
 
             // Estados de interacción
             userSpeaking: false,
@@ -187,9 +196,11 @@ class ModernVoiceAgent {
 
         // Log de inicialización usando CONFIG.debug
         if (CONFIG.debug.enabled) {
-            console.log("🤖 ModernVoiceAgent v2.0.0-config-truth inicializado");
-            console.log("✅ Usando CONFIG v4.0 como fuente de verdad única");
-            console.log("🎯 Zero duplicación de configuración garantizada");
+            Logger.debug(
+                "🤖 ModernVoiceAgent v2.0.0-config-truth inicializado"
+            );
+            Logger.debug("✅ Usando CONFIG v4.0 como fuente de verdad única");
+            Logger.debug("🎯 Zero duplicación de configuración garantizada");
         }
     }
 
@@ -208,7 +219,7 @@ class ModernVoiceAgent {
         this._state.dynacastSupported = supportsDynacast();
 
         if (CONFIG.debug.enabled) {
-            console.log("🔍 Capacidades del navegador:", {
+            Logger.debug("🔍 Capacidades del navegador:", {
                 basic: true,
                 adaptiveStream: this._state.adaptiveStreamSupported,
                 dynacast: this._state.dynacastSupported,
@@ -224,7 +235,7 @@ class ModernVoiceAgent {
         if (CONFIG.debug.enabled) {
             setLogExtension((level, msg, context) => {
                 if (level >= LogLevel.warn) {
-                    console.log(`[LiveKit ${LogLevel[level]}]`, msg, context);
+                    Logger.debug(`[LiveKit ${LogLevel[level]}]`, msg, context);
                 }
             });
         }
@@ -241,7 +252,7 @@ class ModernVoiceAgent {
      */
     async initialize() {
         if (this._state.connected || this._state.connecting) {
-            console.warn("🤖 Agent ya está conectado o conectándose");
+            Logger.warning("🤖 Agent ya está conectado o conectándose");
             return;
         }
 
@@ -264,7 +275,7 @@ class ModernVoiceAgent {
                 );
 
                 if (CONFIG.debug.enabled) {
-                    console.log(
+                    Logger.debug(
                         `🚀 Iniciando conexión (intento ${attempt}/${maxRetries})`
                     );
                 }
@@ -307,12 +318,12 @@ class ModernVoiceAgent {
                         this._state.connectionPrepared = true;
 
                         if (CONFIG.debug.logConnectionPreWarming) {
-                            console.log(
+                            Logger.debug(
                                 "⚡ Conexión pre-calentada exitosamente"
                             );
                         }
                     } catch (prepareError) {
-                        console.log(
+                        Logger.debug(
                             "⚠️ PrepareConnection falló, continuando sin pre-calentamiento:",
                             prepareError.message
                         );
@@ -351,13 +362,13 @@ class ModernVoiceAgent {
                     "connected"
                 );
                 this._emit("ready");
-                console.log("🔥 EMITIENDO EVENTO READY DESDE VOICE-AGENT-SDK");
-                console.log(
+                Logger.debug("🔥 EMITIENDO EVENTO READY DESDE VOICE-AGENT-SDK");
+                Logger.debug(
                     "✅ ModernVoiceAgent conectado exitosamente usando CONFIG"
                 );
                 return; // Éxito
             } catch (error) {
-                console.error(`❌ Intento ${attempt} falló:`, error);
+                Logger.error(`❌ Intento ${attempt} falló:`, error);
 
                 this._state.connecting = false;
                 this._metrics.errorCount++;
@@ -412,7 +423,7 @@ class ModernVoiceAgent {
         this._room = new Room(roomOptions);
 
         if (CONFIG.debug.enabled) {
-            console.log(
+            Logger.debug(
                 "🏠 Room creado usando CONFIG.livekit.roomOptions directamente:",
                 roomOptions
             );
@@ -471,7 +482,7 @@ class ModernVoiceAgent {
 
                         return response;
                     } catch (error) {
-                        console.error(
+                        Logger.error(
                             `❌ Error en RPC method ${methodName}:`,
                             error
                         );
@@ -485,7 +496,7 @@ class ModernVoiceAgent {
         });
 
         if (CONFIG.debug.enabled) {
-            console.log(
+            Logger.debug(
                 "🔗 RPC Methods configurados desde CONFIG:",
                 Array.from(this._registeredRpcMethods.keys())
             );
@@ -521,13 +532,13 @@ class ModernVoiceAgent {
             await this._room.localParticipant.setAttributes(attributes);
 
             if (CONFIG.debug.enabled) {
-                console.log(
+                Logger.debug(
                     "✅ Participant attributes esenciales establecidos:",
                     attributes
                 );
             }
         } catch (error) {
-            console.warn(
+            Logger.warning(
                 "⚠️ Error estableciendo atributos (no crítico):",
                 error.message
             );
@@ -605,7 +616,7 @@ class ModernVoiceAgent {
                 this._onMediaDevicesChanged.bind(this)
             );
 
-        console.log(
+        Logger.debug(
             "📡 Event handlers v2.13.6 configurados con chaining pattern + MVP events"
         );
     }
@@ -618,7 +629,7 @@ class ModernVoiceAgent {
      */
     async enableVoiceMode() {
         if (this._state.voiceModeActive) {
-            console.warn("🎤 Modo de voz ya está activo");
+            Logger.warning("🎤 Modo de voz ya está activo");
             return;
         }
 
@@ -634,7 +645,7 @@ class ModernVoiceAgent {
             this._state.microphoneEnabled = true;
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log("🎤 Micrófono habilitado exitosamente");
+                Logger.debug("🎤 Micrófono habilitado exitosamente");
             }
 
             // Verificar estado de audio
@@ -653,9 +664,9 @@ class ModernVoiceAgent {
             this._emit("statusChange", CONFIG.status.VOICE_ACTIVE, "connected"); // ✅ DESDE CONFIG
             this._emit("voiceModeChanged", true);
 
-            console.log("✅ Modo de voz habilitado exitosamente");
+            Logger.debug("✅ Modo de voz habilitado exitosamente");
         } catch (error) {
-            console.error("❌ Error habilitando modo de voz:", error);
+            Logger.error("❌ Error habilitando modo de voz:", error);
             this._state.voiceModeActive = false;
             this._emit("error", error.message);
             throw error;
@@ -681,7 +692,7 @@ class ModernVoiceAgent {
             );
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log(
+                Logger.debug(
                     "🎤 Iniciando liberación completa de medios de voz..."
                 );
             }
@@ -695,7 +706,7 @@ class ModernVoiceAgent {
             if (microphonePublication && microphonePublication.track) {
                 try {
                     if (CONFIG.debug.showAudioEvents) {
-                        console.log(
+                        Logger.debug(
                             "🎤 Unpublishing micrófono con stopOnUnpublish: true"
                         );
                     }
@@ -708,12 +719,12 @@ class ModernVoiceAgent {
                     );
 
                     if (CONFIG.debug.showAudioEvents) {
-                        console.log(
+                        Logger.debug(
                             "✅ Track de micrófono unpublished y detenido completamente"
                         );
                     }
                 } catch (unpublishError) {
-                    console.error(
+                    Logger.error(
                         "❌ Error unpublishing micrófono:",
                         unpublishError
                     );
@@ -722,12 +733,12 @@ class ModernVoiceAgent {
                     try {
                         if (microphonePublication.track.mediaStreamTrack) {
                             microphonePublication.track.mediaStreamTrack.stop();
-                            console.log(
+                            Logger.debug(
                                 "✅ Fallback: Track detenido directamente"
                             );
                         }
                     } catch (stopError) {
-                        console.error("❌ Error en fallback stop:", stopError);
+                        Logger.error("❌ Error en fallback stop:", stopError);
                     }
                 }
             } else {
@@ -739,12 +750,12 @@ class ModernVoiceAgent {
                     );
 
                     if (CONFIG.debug.showAudioEvents) {
-                        console.log(
+                        Logger.debug(
                             "✅ Micrófono deshabilitado via setMicrophoneEnabled"
                         );
                     }
                 } catch (disableError) {
-                    console.error(
+                    Logger.error(
                         "❌ Error deshabilitando micrófono:",
                         disableError
                     );
@@ -763,7 +774,7 @@ class ModernVoiceAgent {
                     timestamp: Date.now().toString(),
                 });
             } catch (attributeError) {
-                console.warn(
+                Logger.warning(
                     "⚠️ Error actualizando atributos (no crítico):",
                     attributeError
                 );
@@ -779,23 +790,20 @@ class ModernVoiceAgent {
             this._emit("microphoneChanged", false); // Importante para UI
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log(
+                Logger.debug(
                     "✅ Modo de voz deshabilitado - MEDIOS LIBERADOS COMPLETAMENTE"
                 );
 
                 // ✅ VERIFICACIÓN: Check que no haya tracks activos
                 const remainingTracks =
                     this._room.localParticipant.audioTrackPublications;
-                console.log(
+                Logger.debug(
                     "🔍 Tracks de audio restantes:",
                     remainingTracks.size
                 );
             }
         } catch (error) {
-            console.error(
-                "❌ Error crítico deshabilitando modo de voz:",
-                error
-            );
+            Logger.error("❌ Error crítico deshabilitando modo de voz:", error);
 
             // ✅ CLEANUP DE EMERGENCIA: Forzar liberación de medios
             await this._forceReleaseAllMedia();
@@ -817,7 +825,7 @@ class ModernVoiceAgent {
     async _forceReleaseAllMedia() {
         try {
             if (CONFIG.debug.showAudioEvents) {
-                console.log(
+                Logger.debug(
                     "🚨 CLEANUP DE EMERGENCIA: Forzando liberación de todos los medios"
                 );
             }
@@ -839,12 +847,12 @@ class ModernVoiceAgent {
                             true // stopOnUnpublish: true - FORZAR LIBERACIÓN
                         );
 
-                        console.log(
+                        Logger.debug(
                             "🚨 Emergency cleanup: Track liberado",
                             publication.trackSid
                         );
                     } catch (trackError) {
-                        console.error(
+                        Logger.error(
                             "❌ Error en emergency cleanup:",
                             trackError
                         );
@@ -852,7 +860,7 @@ class ModernVoiceAgent {
                         // ✅ ÚLTIMO RECURSO: Stop directo del MediaStreamTrack
                         if (publication.track.mediaStreamTrack) {
                             publication.track.mediaStreamTrack.stop();
-                            console.log(
+                            Logger.debug(
                                 "🚨 ÚLTIMO RECURSO: MediaStreamTrack.stop() llamado"
                             );
                         }
@@ -864,17 +872,17 @@ class ModernVoiceAgent {
             try {
                 await this._room.localParticipant.setMicrophoneEnabled(false);
             } catch (finalError) {
-                console.error(
+                Logger.error(
                     "❌ Error en backup final setMicrophoneEnabled:",
                     finalError
                 );
             }
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log("✅ Emergency cleanup completado");
+                Logger.debug("✅ Emergency cleanup completado");
             }
         } catch (emergencyError) {
-            console.error(
+            Logger.error(
                 "❌ Error crítico en emergency cleanup:",
                 emergencyError
             );
@@ -898,7 +906,7 @@ class ModernVoiceAgent {
             this._emit("microphoneChanged", newState);
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log(
+                Logger.debug(
                     "🎤 Micrófono:",
                     newState ? "HABILITADO" : "SILENCIADO"
                 );
@@ -906,7 +914,7 @@ class ModernVoiceAgent {
 
             return !newState; // Retornar estado muted
         } catch (error) {
-            console.error("❌ Error alternando micrófono:", error);
+            Logger.error("❌ Error alternando micrófono:", error);
             this._emit("error", CONFIG.errors.MICROPHONE_ERROR); // ✅ DESDE CONFIG
             throw error;
         }
@@ -936,8 +944,8 @@ class ModernVoiceAgent {
             this._emit("audioEnabled");
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log("🔊 Audio habilitado por interacción del usuario");
-                console.log(
+                Logger.debug("🔊 Audio habilitado por interacción del usuario");
+                Logger.debug(
                     "🔊 Elementos de audio actualizados:",
                     this._audioElements.length
                 );
@@ -945,7 +953,7 @@ class ModernVoiceAgent {
 
             return true;
         } catch (error) {
-            console.error("❌ Error iniciando audio:", error);
+            Logger.error("❌ Error iniciando audio:", error);
             this._emit("error", CONFIG.errors.AUDIO_ERROR);
             return false;
         }
@@ -964,7 +972,7 @@ class ModernVoiceAgent {
      * @example
      * // Alternar estado de audio
      * const isListening = await agent.toggleAudio();
-     * console.log(isListening ? 'Escuchando' : 'Silenciado');
+     * Logger.debug(isListening ? 'Escuchando' : 'Silenciado');
      */
     async toggleAudio() {
         try {
@@ -973,7 +981,7 @@ class ModernVoiceAgent {
             }
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log("🔊 Toggle audio - Estado actual:", {
+                Logger.debug("🔊 Toggle audio - Estado actual:", {
                     audioEnabled: this._state.audioEnabled,
                     audioPlaybackAllowed: this._state.audioPlaybackAllowed,
                     canPlaybackAudio: this._room.canPlaybackAudio,
@@ -989,7 +997,7 @@ class ModernVoiceAgent {
                 const success = await this.startAudio();
 
                 if (CONFIG.debug.showAudioEvents) {
-                    console.log("🔊 Primera interacción de audio:", success);
+                    Logger.debug("🔊 Primera interacción de audio:", success);
                 }
 
                 return success;
@@ -1005,15 +1013,12 @@ class ModernVoiceAgent {
                     element.volume = newState ? 1.0 : 0.0; // Doble seguridad
 
                     if (CONFIG.debug.showAudioEvents) {
-                        console.log(
+                        Logger.debug(
                             `🔊 Elemento audio: muted=${element.muted}, volume=${element.volume}`
                         );
                     }
                 } catch (error) {
-                    console.error(
-                        "Error controlando elemento de audio:",
-                        error
-                    );
+                    Logger.error("Error controlando elemento de audio:", error);
                 }
             });
 
@@ -1021,7 +1026,7 @@ class ModernVoiceAgent {
             this._emit("audioChanged", newState);
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log(
+                Logger.debug(
                     `🔊 Toggle audio completado: ${
                         newState ? "ESCUCHANDO" : "SILENCIADO"
                     }`
@@ -1030,7 +1035,7 @@ class ModernVoiceAgent {
 
             return newState;
         } catch (error) {
-            console.error("❌ Error en toggleAudio:", error);
+            Logger.error("❌ Error en toggleAudio:", error);
             this._emit("error", CONFIG.errors.AUDIO_ERROR);
             return false;
         }
@@ -1047,18 +1052,18 @@ class ModernVoiceAgent {
                 if (wasPlaying && !element.muted && element.paused) {
                     element
                         .play()
-                        .catch((e) => console.log("Audio play failed:", e));
+                        .catch((e) => Logger.debug("Audio play failed:", e));
                 }
 
                 if (CONFIG.debug.showAudioEvents) {
-                    console.log(`🔊 Elemento ${index} actualizado:`, {
+                    Logger.debug(`🔊 Elemento ${index} actualizado:`, {
                         muted: element.muted,
                         volume: element.volume,
                         paused: element.paused,
                     });
                 }
             } catch (error) {
-                console.error(
+                Logger.error(
                     `Error actualizando elemento audio ${index}:`,
                     error
                 );
@@ -1090,10 +1095,10 @@ class ModernVoiceAgent {
             this._emit("messageSent", text.trim());
 
             if (CONFIG.debug.enabled) {
-                console.log("💬 Mensaje enviado:", text.trim());
+                Logger.debug("💬 Mensaje enviado:", text.trim());
             }
         } catch (error) {
-            console.error("❌ Error enviando mensaje:", error);
+            Logger.error("❌ Error enviando mensaje:", error);
             throw error;
         }
     }
@@ -1135,7 +1140,7 @@ class ModernVoiceAgent {
             return JSON.parse(response);
         } catch (error) {
             this._logRPC("FAILED", method, error.message);
-            console.error(`❌ Error en RPC call ${method}:`, error);
+            Logger.error(`❌ Error en RPC call ${method}:`, error);
             throw error;
         }
     }
@@ -1151,7 +1156,7 @@ class ModernVoiceAgent {
         }
 
         try {
-            console.log("🔌 Desconectando agente...");
+            Logger.debug("🔌 Desconectando agente...");
 
             this._state.voiceModeActive = false;
             this._state.connecting = false;
@@ -1159,10 +1164,28 @@ class ModernVoiceAgent {
             await this._room.disconnect();
             this._cleanup();
 
-            console.log("✅ Agente desconectado exitosamente");
+            Logger.debug("✅ Agente desconectado exitosamente");
         } catch (error) {
-            console.error("❌ Error durante desconexión:", error);
+            Logger.error("❌ Error durante desconexión:", error);
         }
+    }
+
+    /**
+     * ✅ NUEVO: Obtiene el avatar worker participant
+     * @returns {RemoteParticipant|null} Avatar worker o null
+     * @public
+     */
+    getAvatarWorker() {
+        return this._avatarWorker;
+    }
+
+    /**
+     * ✅ NUEVO: Verifica si hay avatar worker conectado
+     * @returns {boolean} True si avatar worker está conectado
+     * @public
+     */
+    hasAvatarWorker() {
+        return this._state.avatarConnected && this._avatarWorker !== null;
     }
 
     /**
@@ -1182,6 +1205,10 @@ class ModernVoiceAgent {
             audioEnabled: this._state.audioEnabled,
             audioPlaybackAllowed: this._state.audioPlaybackAllowed,
             canPlaybackAudio: this._room?.canPlaybackAudio || false,
+            avatarConnected: this._state.avatarConnected,
+            avatarVideoEnabled: this._state.avatarVideoEnabled,
+            hasAvatarWorker: this.hasAvatarWorker(),
+            avatarWorkerIdentity: this._avatarWorker?.identity || null,
         };
     }
 
@@ -1219,7 +1246,7 @@ class ModernVoiceAgent {
             // ✅ VALIDACIÓN INICIAL
             if (!this._room?.localParticipant) {
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(
+                    Logger.debug(
                         "🔍 RTT: Room o LocalParticipant no disponible"
                     );
                 }
@@ -1229,7 +1256,7 @@ class ModernVoiceAgent {
             // 🎯 ESTRATEGIA 1: LocalTrackPublication.getStats() - API OFICIAL v2.13.6
             try {
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(
+                    Logger.debug(
                         "🔍 RTT: Intentando LocalTrackPublication.getStats()..."
                     );
                 }
@@ -1252,7 +1279,7 @@ class ModernVoiceAgent {
 
                     if (localRTT > 0) {
                         if (CONFIG.debug.showConnectionQuality) {
-                            console.log(
+                            Logger.debug(
                                 `✅ RTT desde LocalTrackPublication: ${localRTT}ms`
                             );
                         }
@@ -1260,14 +1287,14 @@ class ModernVoiceAgent {
                     }
                 } else {
                     if (CONFIG.debug.showConnectionQuality) {
-                        console.log(
+                        Logger.debug(
                             "⚠️ RTT: LocalTrackPublication no disponible o sin getStats()"
                         );
                     }
                 }
             } catch (localError) {
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(
+                    Logger.debug(
                         "⚠️ RTT: LocalTrackPublication.getStats() falló:",
                         localError.message
                     );
@@ -1277,10 +1304,10 @@ class ModernVoiceAgent {
             // 🎯 ESTRATEGIA 2: RemoteTrackPublication.getStats() - PERSPECTIVA DEL AGENTE
             try {
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(
+                    Logger.debug(
                         "🔍 RTT: Intentando RemoteTrackPublication.getStats()..."
                     );
-                    console.log(
+                    Logger.debug(
                         "🔍 RTT: Agent participant:",
                         this._agentParticipant?.identity
                     );
@@ -1294,11 +1321,11 @@ class ModernVoiceAgent {
                         );
 
                     if (CONFIG.debug.showConnectionQuality) {
-                        console.log(
+                        Logger.debug(
                             "🔍 RTT: Agent audio publication:",
                             !!agentAudioPub
                         );
-                        console.log(
+                        Logger.debug(
                             "🔍 RTT: Agent getStats method:",
                             typeof agentAudioPub?.getStats
                         );
@@ -1316,7 +1343,7 @@ class ModernVoiceAgent {
 
                         if (remoteRTT > 0) {
                             if (CONFIG.debug.showConnectionQuality) {
-                                console.log(
+                                Logger.debug(
                                     `✅ RTT desde RemoteTrackPublication: ${remoteRTT}ms`
                                 );
                             }
@@ -1324,21 +1351,21 @@ class ModernVoiceAgent {
                         }
                     } else {
                         if (CONFIG.debug.showConnectionQuality) {
-                            console.log(
+                            Logger.debug(
                                 "⚠️ RTT: RemoteTrackPublication no disponible o sin getStats()"
                             );
                         }
                     }
                 } else {
                     if (CONFIG.debug.showConnectionQuality) {
-                        console.log(
+                        Logger.debug(
                             "⚠️ RTT: No hay agente participante disponible"
                         );
                     }
                 }
             } catch (remoteError) {
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(
+                    Logger.debug(
                         "⚠️ RTT: RemoteTrackPublication.getStats() falló:",
                         remoteError.message
                     );
@@ -1348,7 +1375,7 @@ class ModernVoiceAgent {
             // 🎯 ESTRATEGIA 3: Peer Connection via Track Publications - v2.13.6
             try {
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(
+                    Logger.debug(
                         "🔍 RTT: Intentando PeerConnection via track publications..."
                     );
                 }
@@ -1378,7 +1405,7 @@ class ModernVoiceAgent {
 
                             if (senderRTT > 0) {
                                 if (CONFIG.debug.showConnectionQuality) {
-                                    console.log(
+                                    Logger.debug(
                                         `✅ RTT desde RTC Sender: ${senderRTT}ms`
                                     );
                                 }
@@ -1400,7 +1427,7 @@ class ModernVoiceAgent {
 
                     if (pcRTT > 0) {
                         if (CONFIG.debug.showConnectionQuality) {
-                            console.log(
+                            Logger.debug(
                                 `✅ RTT desde PeerConnection directo: ${pcRTT}ms`
                             );
                         }
@@ -1409,7 +1436,7 @@ class ModernVoiceAgent {
                 }
             } catch (pcError) {
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(
+                    Logger.debug(
                         "⚠️ RTT: PeerConnection via tracks falló:",
                         pcError.message
                     );
@@ -1419,7 +1446,7 @@ class ModernVoiceAgent {
             // 🎯 ESTRATEGIA 4: SIMULADO BASADO EN CONNECTION QUALITY - ÚLTIMO RECURSO
             try {
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(
+                    Logger.debug(
                         "🔍 RTT: Usando estimación basada en connection quality..."
                     );
                 }
@@ -1429,7 +1456,7 @@ class ModernVoiceAgent {
 
                 if (estimatedRTT > 0) {
                     if (CONFIG.debug.showConnectionQuality) {
-                        console.log(
+                        Logger.debug(
                             `🎯 RTT estimado desde quality (${quality}): ${estimatedRTT}ms`
                         );
                     }
@@ -1437,7 +1464,7 @@ class ModernVoiceAgent {
                 }
             } catch (estimationError) {
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(
+                    Logger.debug(
                         "⚠️ RTT: Estimación falló:",
                         estimationError.message
                     );
@@ -1446,13 +1473,13 @@ class ModernVoiceAgent {
 
             // 🚫 NINGUNA ESTRATEGIA FUNCIONÓ
             if (CONFIG.debug.showConnectionQuality) {
-                console.log(
+                Logger.debug(
                     "❌ RTT: Todas las estrategias v2.13.6 fallaron - retornando 0ms"
                 );
             }
             return 0;
         } catch (criticalError) {
-            console.error(
+            Logger.error(
                 "❌ Error crítico obteniendo RTT v2.13.6:",
                 criticalError
             );
@@ -1479,7 +1506,7 @@ class ModernVoiceAgent {
     _estimateRTTFromQuality(quality) {
         try {
             if (CONFIG.debug.showConnectionQuality) {
-                console.log("🔍 RTT: Analizando quality para estimación:", {
+                Logger.debug("🔍 RTT: Analizando quality para estimación:", {
                     quality,
                     type: typeof quality,
                     stringValue: String(quality),
@@ -1549,14 +1576,14 @@ class ModernVoiceAgent {
             }
 
             if (CONFIG.debug.showConnectionQuality) {
-                console.log(
+                Logger.debug(
                     `🎯 RTT estimado final: ${qualityStr} → ${estimatedRTT}ms`
                 );
             }
 
             return estimatedRTT;
         } catch (error) {
-            console.error("❌ Error en estimación RTT:", error);
+            Logger.error("❌ Error en estimación RTT:", error);
             return 100; // Fallback seguro
         }
     }
@@ -1582,7 +1609,7 @@ class ModernVoiceAgent {
      * @example
      * // Uso interno desde _getWebRTCLatency
      * const rtt = this._extractRTTFromStats(statsReport, "room");
-     * if (rtt > 0) console.log(`RTT encontrado: ${rtt}ms`);
+     * if (rtt > 0) Logger.debug(`RTT encontrado: ${rtt}ms`);
      *
      * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/RTCStatsReport}
      * @see {@link https://w3c.github.io/webrtc-stats/}
@@ -1595,7 +1622,7 @@ class ModernVoiceAgent {
             // ✅ VALIDACIÓN: Verificar que stats sea iterable
             if (!stats || typeof stats[Symbol.iterator] !== "function") {
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(`⚠️ RTT: Stats de ${source} no es iterable`);
+                    Logger.debug(`⚠️ RTT: Stats de ${source} no es iterable`);
                 }
                 return 0;
             }
@@ -1621,7 +1648,7 @@ class ModernVoiceAgent {
                     );
 
                     if (CONFIG.debug.showConnectionQuality) {
-                        console.log(
+                        Logger.debug(
                             `🎯 RTT: outbound-rtp (${source}): ${statsFound.outboundRtp}ms [ID: ${statId}]`
                         );
                     }
@@ -1638,7 +1665,7 @@ class ModernVoiceAgent {
                     );
 
                     if (CONFIG.debug.showConnectionQuality) {
-                        console.log(
+                        Logger.debug(
                             `🎯 RTT: remote-inbound-rtp (${source}): ${statsFound.remoteInboundRtp}ms [ID: ${statId}]`
                         );
                     }
@@ -1656,7 +1683,7 @@ class ModernVoiceAgent {
                     );
 
                     if (CONFIG.debug.showConnectionQuality) {
-                        console.log(
+                        Logger.debug(
                             `🎯 RTT: candidate-pair (${source}): ${statsFound.candidatePair}ms [ID: ${statId}]`
                         );
                     }
@@ -1673,7 +1700,7 @@ class ModernVoiceAgent {
                     );
 
                     if (CONFIG.debug.showConnectionQuality) {
-                        console.log(
+                        Logger.debug(
                             `🎯 RTT: transport (${source}): ${statsFound.transport}ms [ID: ${statId}]`
                         );
                     }
@@ -1697,13 +1724,13 @@ class ModernVoiceAgent {
                     : "transport";
 
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(
+                    Logger.debug(
                         `🏆 RTT seleccionado de ${source}: ${selectedRTT}ms (tipo: ${selectedType})`
                     );
                 }
             } else {
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(
+                    Logger.debug(
                         `❌ RTT: No se encontró latencia válida en stats de ${source}`
                     );
                 }
@@ -1711,7 +1738,7 @@ class ModernVoiceAgent {
 
             return selectedRTT;
         } catch (extractError) {
-            console.error(
+            Logger.error(
                 `❌ Error extrayendo RTT de stats (${source}):`,
                 extractError
             );
@@ -1729,7 +1756,7 @@ class ModernVoiceAgent {
      */
     _onRoomConnected() {
         if (CONFIG.debug.enabled) {
-            console.log("🔗 Room conectado exitosamente");
+            Logger.debug("🔗 Room conectado exitosamente");
         }
         this._emit("roomConnected");
     }
@@ -1739,7 +1766,7 @@ class ModernVoiceAgent {
      * @private
      */
     _onRoomDisconnected(reason) {
-        console.log("🔗 Room desconectado:", reason);
+        Logger.debug("🔗 Room desconectado:", reason);
 
         this._updateConnectionState(false);
         this._cleanup();
@@ -1759,7 +1786,7 @@ class ModernVoiceAgent {
      * @private
      */
     _onRoomReconnecting() {
-        console.log("🔄 Reconectando...");
+        Logger.debug("🔄 Reconectando...");
         this._emit("statusChange", CONFIG.status.RECONNECTING, "connecting"); // ✅ DESDE CONFIG
     }
 
@@ -1768,7 +1795,7 @@ class ModernVoiceAgent {
      * @private
      */
     _onRoomReconnected() {
-        console.log("✅ Reconectado exitosamente");
+        Logger.debug("✅ Reconectado exitosamente");
         this._metrics.reconnectCount++;
         this._emit("statusChange", CONFIG.status.CONNECTED, "connected"); // ✅ DESDE CONFIG
     }
@@ -1779,54 +1806,94 @@ class ModernVoiceAgent {
     // ==========================================
 
     /**
-     * Handler: Participante conectado
+     * Handler: Participante conectado con soporte para Avatar Workers
      * @private
      */
     _onParticipantConnected(participant) {
         if (CONFIG.debug.enabled) {
-            console.log("👤 Participante conectado:", participant.identity);
+            Logger.debug("👤 Participante conectado:", {
+                identity: participant.identity,
+                kind: participant.kind,
+                attributes: participant.attributes,
+            });
         }
 
-        // ✅ v2.13.6: Detectar agente por identity y attributes
-        if (this._isAgentParticipant(participant)) {
-            this._agentParticipant = participant;
-            this._state.agentConnected = true;
+        // ✅ NUEVO: Detectar tipo de agente usando estándar oficial
+        const agentInfo = this._isAgentParticipant(participant);
 
-            console.log("🤖 Agente Python conectado:", participant.identity);
-            this._emit("agentConnected", participant);
+        if (agentInfo.isAgent) {
+            if (agentInfo.type === "main") {
+                // ✅ MANTENER: Agent principal (lógica existente)
+                this._agentParticipant = participant;
+                this._state.agentConnected = true;
 
-            this._setupAgentParticipantListeners(participant);
+                Logger.debug(
+                    "🤖 Agente Python conectado:",
+                    participant.identity
+                );
+                this._emit("agentConnected", participant);
+                this._setupAgentParticipantListeners(participant);
+            } else if (agentInfo.type === "avatar") {
+                // ✅ NUEVO: Avatar worker detectado
+                this._avatarWorker = participant;
+                this._state.avatarConnected = true;
+
+                Logger.debug(
+                    "🎭 Avatar Worker conectado:",
+                    participant.identity
+                );
+                this._emit("avatarWorkerConnected", participant);
+                this._setupAvatarWorkerListeners(participant);
+            }
+        } else {
+            // ✅ LOGGING: Participante regular
+            if (CONFIG.debug.enabled) {
+                Logger.debug(
+                    "👥 Participante regular conectado:",
+                    participant.identity
+                );
+            }
         }
 
         this._emit("participantConnected", participant);
     }
 
     /**
-     * Handler: Participante desconectado
+     * Handler: Participante desconectado con soporte para Avatar Workers
      * @private
      */
     _onParticipantDisconnected(participant) {
         if (CONFIG.debug.enabled) {
-            console.log("👤 Participante desconectado:", participant.identity);
+            Logger.debug("👤 Participante desconectado:", participant.identity);
         }
 
+        // ✅ MANTENER: Lógica existente para agent principal
         if (participant === this._agentParticipant) {
-            console.log("🤖 Agente Python desconectado");
+            Logger.warning("🤖 Agente Python desconectado");
             this._agentParticipant = null;
             this._state.agentConnected = false;
             this._emit("agentDisconnected", participant);
+        }
+
+        // ✅ NUEVO: Lógica para avatar worker
+        if (participant === this._avatarWorker) {
+            Logger.warning("🎭 Avatar Worker desconectado");
+            this._avatarWorker = null;
+            this._state.avatarConnected = false;
+            this._state.avatarVideoEnabled = false;
+            this._emit("avatarWorkerDisconnected", participant);
         }
 
         this._emit("participantDisconnected", participant);
     }
 
     /**
-     * Handler: Track suscrito
+     * Handler: Track suscrito con soporte para Video Avatar
      * @private
      */
     _onTrackSubscribed(track, publication, participant) {
         if (CONFIG.debug.showAudioEvents) {
-            console.log(
+            Logger.audio(
                 "🎵 Track suscrito:",
                 track.kind,
                 "de",
@@ -1834,11 +1901,26 @@ class ModernVoiceAgent {
             );
         }
 
-        if (
-            track.kind === Track.Kind.Audio &&
-            this._isAgentParticipant(participant)
-        ) {
-            this._handleAgentAudioTrack(track, publication);
+        // ✅ MEJORADO: Detectar tipo de agente para manejar tracks apropiados
+        const agentInfo = this._isAgentParticipant(participant);
+
+        if (agentInfo.isAgent) {
+            if (agentInfo.type === "main" && track.kind === Track.Kind.Audio) {
+                // ✅ MANTENER: Audio del agente principal (lógica existente)
+                this._handleAgentAudioTrack(track, publication);
+            } else if (
+                agentInfo.type === "avatar" &&
+                track.kind === Track.Kind.Video
+            ) {
+                // ✅ NUEVO: Video del avatar worker
+                this._handleAvatarVideoTrack(track, publication);
+            } else if (
+                agentInfo.type === "avatar" &&
+                track.kind === Track.Kind.Audio
+            ) {
+                // ✅ NUEVO: Audio del avatar worker (sincronizado con video)
+                this._handleAvatarAudioTrack(track, publication);
+            }
         }
 
         this._emit("trackSubscribed", track, publication, participant);
@@ -1850,7 +1932,7 @@ class ModernVoiceAgent {
      */
     _onTrackUnsubscribed(track, publication, participant) {
         if (CONFIG.debug.showAudioEvents) {
-            console.log(
+            Logger.debug(
                 "🎵 Track no suscrito:",
                 track.kind,
                 "de",
@@ -1872,7 +1954,7 @@ class ModernVoiceAgent {
         this._state.audioPlaybackAllowed = canPlayback;
 
         if (CONFIG.debug.showAudioEvents) {
-            console.log(
+            Logger.debug(
                 "🔊 Audio playback status:",
                 canPlayback ? "PERMITIDO" : "BLOQUEADO"
             );
@@ -1907,7 +1989,7 @@ class ModernVoiceAgent {
             if (CONFIG.debug.logTranscriptionLatency) {
                 const latency = Date.now() - (segment.startTime || Date.now());
                 this._metrics.transcriptionLatency.push(latency);
-                console.log(`📝 Transcripción latencia: ${latency}ms`);
+                Logger.debug(`📝 Transcripción latencia: ${latency}ms`);
             }
 
             if (isFromUser) {
@@ -1932,12 +2014,12 @@ class ModernVoiceAgent {
                 this._state.lastLatencyMeasurement = rtt;
 
                 if (CONFIG.debug.showConnectionQuality) {
-                    console.log(`📶 RTT obtenido: ${rtt}ms`);
+                    Logger.debug(`📶 RTT obtenido: ${rtt}ms`);
                 }
 
                 this._emit("connectionQualityChanged", quality, rtt);
             } catch (error) {
-                console.error("Error obteniendo RTT:", error);
+                Logger.error("Error obteniendo RTT:", error);
                 // ✅ FALLBACK: emitir sin RTT
                 this._emit("connectionQualityChanged", quality, 0);
             }
@@ -1957,7 +2039,7 @@ class ModernVoiceAgent {
             this._emit("userSpeakingChanged", userSpeaking);
 
             if (CONFIG.debug.logVoiceActivityEvents) {
-                console.log("🎤 Usuario hablando:", userSpeaking);
+                Logger.debug("🎤 Usuario hablando:", userSpeaking);
             }
         }
 
@@ -1971,7 +2053,7 @@ class ModernVoiceAgent {
             }
 
             if (CONFIG.debug.logVoiceActivityEvents) {
-                console.log("🤖 Agente hablando:", agentSpeaking);
+                Logger.debug("🤖 Agente hablando:", agentSpeaking);
             }
         }
 
@@ -1983,7 +2065,7 @@ class ModernVoiceAgent {
      * @private
      */
     _onMediaDevicesError(error) {
-        console.error("🎥 Error de dispositivo de media:", error);
+        Logger.error("🎥 Error de dispositivo de media:", error);
 
         const failure = MediaDeviceFailure.getFailure(error);
         let userMessage = CONFIG.errors.MICROPHONE_ERROR; // ✅ DESDE CONFIG
@@ -2009,7 +2091,7 @@ class ModernVoiceAgent {
      */
     _onDataReceived(payload, participant, kind, topic) {
         if (CONFIG.debug.enabled) {
-            console.log("📦 Datos recibidos:", {
+            Logger.debug("📦 Datos recibidos:", {
                 kind,
                 topic,
                 from: participant.identity,
@@ -2020,7 +2102,7 @@ class ModernVoiceAgent {
             const data = JSON.parse(new TextDecoder().decode(payload));
             this._handleDataMessage(data, participant, topic);
         } catch (error) {
-            console.error("❌ Error procesando datos recibidos:", error);
+            Logger.error("❌ Error procesando datos recibidos:", error);
         }
     }
 
@@ -2049,7 +2131,7 @@ class ModernVoiceAgent {
      */
     _onConnectionStateChanged(connectionState) {
         if (CONFIG.debug.showConnectionState) {
-            console.log(`🔗 Estado de conexión detallado: ${connectionState}`);
+            Logger.debug(`🔗 Estado de conexión detallado: ${connectionState}`);
         }
 
         // ✅ EMIT para UI: Estado detallado para mejores indicadores visuales
@@ -2074,7 +2156,7 @@ class ModernVoiceAgent {
      */
     _onLocalAudioSilenceDetected() {
         if (CONFIG.debug.showAudioEvents) {
-            console.log("🔇 Silencio detectado en micrófono local");
+            Logger.debug("🔇 Silencio detectado en micrófono local");
         }
 
         // ✅ EMIT para UI: Mostrar banner "Revisa tu micrófono"
@@ -2098,7 +2180,7 @@ class ModernVoiceAgent {
      */
     _onLocalTrackPublished(publication, participant) {
         if (CONFIG.debug.showAudioEvents) {
-            console.log(
+            Logger.debug(
                 `🎤 Track local publicado: ${publication.kind} (${publication.trackSid})`
             );
         }
@@ -2126,7 +2208,7 @@ class ModernVoiceAgent {
      * // - Track no disponible temporalmente
      */
     _onTrackSubscriptionFailed(trackSid, participant) {
-        console.error(
+        Logger.error(
             `❌ Falló suscripción a track ${trackSid} de ${participant.identity}`
         );
 
@@ -2153,7 +2235,7 @@ class ModernVoiceAgent {
      */
     _onActiveDeviceChanged(kind, deviceId) {
         if (CONFIG.debug.showAudioEvents) {
-            console.log(`🎧 Dispositivo ${kind} cambiado a: ${deviceId}`);
+            Logger.debug(`🎧 Dispositivo ${kind} cambiado a: ${deviceId}`);
         }
 
         // ✅ EMIT para UI: Actualizar etiquetas de dispositivos seleccionados
@@ -2178,7 +2260,7 @@ class ModernVoiceAgent {
      */
     _onMediaDevicesChanged() {
         if (CONFIG.debug.showAudioEvents) {
-            console.log("🔌 Dispositivos de media disponibles cambiaron");
+            Logger.debug("🔌 Dispositivos de media disponibles cambiaron");
         }
 
         // ✅ EMIT para UI: Refrescar selectores de dispositivos
@@ -2243,34 +2325,67 @@ class ModernVoiceAgent {
     }
 
     /**
-     * Verifica si un participante es el agente Python
+     * Verifica si un participante es agente y determina su tipo según LiveKit oficial
+     *
+     * BASADO EN: https://docs.livekit.io/agents/integrations/avatar/
+     * - Agent principal: Kind.Agent + lk.publish_on_behalf === null
+     * - Avatar worker: Kind.Agent + lk.publish_on_behalf === agent.identity
+     * ✅ CORREGIDO: Detecta agente según documentación oficial de Tavus
+     *
+     * @param {RemoteParticipant} participant - Participante a verificar
+     * @returns {{isAgent: boolean, type: 'main'|'avatar'|null}} Información del agente
      * @private
      */
     _isAgentParticipant(participant) {
-        if (!participant) return false;
+        if (!participant) {
+            return { isAgent: false, type: null };
+        }
 
         const attributes = participant.attributes || {};
+        const { kind, identity } = participant;
 
-        const isAgentByType = attributes.type === "agent";
-        const isAgentByRole = attributes.role === "agent";
-        const isAgentByIdentity =
-            participant.identity &&
-            (participant.identity.includes("agent") ||
-                participant.identity.includes("python") ||
-                participant.identity.startsWith("agent-"));
+        // ✅ VERIFICAR: kind === 'agent' (todos los agentes LiveKit)
+        if (kind !== "agent") {
+            return { isAgent: false, type: null };
+        }
 
-        const isAgentByMetadata =
-            attributes.clientType === "agent" ||
-            attributes.agent_name ||
-            attributes.is_agent === "true" ||
-            attributes.is_agent === true;
+        // ✅ TAVUS: Avatar worker tiene identity fija "tavus-avatar-agent"
+        if (identity === "tavus-avatar-agent") {
+            if (CONFIG.debug.enabled) {
+                Logger.debug("🎭 Tavus avatar worker detectado:", identity);
+            }
+            return { isAgent: true, type: "avatar" };
+        }
 
-        return (
-            isAgentByType ||
-            isAgentByRole ||
-            isAgentByIdentity ||
-            isAgentByMetadata
-        );
+        // ✅ TAVUS: Verificar por atributo lk.publish_on_behalf
+        const publishOnBehalf = attributes["lk.publish_on_behalf"];
+        if (
+            publishOnBehalf &&
+            publishOnBehalf !== null &&
+            publishOnBehalf !== ""
+        ) {
+            if (CONFIG.debug.enabled) {
+                Logger.debug(
+                    "🎭 Avatar worker detectado por publish_on_behalf:",
+                    identity
+                );
+            }
+            return { isAgent: true, type: "avatar" };
+        }
+
+        // ✅ AGENT PRINCIPAL: Sin publish_on_behalf
+        if (
+            publishOnBehalf === null ||
+            publishOnBehalf === undefined ||
+            publishOnBehalf === ""
+        ) {
+            if (CONFIG.debug.enabled) {
+                Logger.debug("🤖 Agent principal detectado:", identity);
+            }
+            return { isAgent: true, type: "main" };
+        }
+
+        return { isAgent: false, type: null };
     }
 
     /**
@@ -2281,7 +2396,7 @@ class ModernVoiceAgent {
         participant
             .on(ParticipantEvent.AttributesChanged, (changed) => {
                 if (CONFIG.debug.enabled) {
-                    console.log("🤖 Atributos del agente cambiaron:", changed);
+                    Logger.debug("🤖 Atributos del agente cambiaron:", changed);
                 }
                 if (changed["lk.agent.state"]) {
                     const agentState = changed["lk.agent.state"];
@@ -2303,6 +2418,49 @@ class ModernVoiceAgent {
             });
     }
 
+    /**
+     * Configura listeners específicos del avatar worker
+     *
+     * Sigue el mismo patrón que _setupAgentParticipantListeners para
+     * mantener consistencia en la arquitectura del código.
+     *
+     * @param {RemoteParticipant} participant - Avatar worker participant
+     * @private
+     */
+    _setupAvatarWorkerListeners(participant) {
+        participant
+            .on(ParticipantEvent.TrackMuted, (track) => {
+                if (track.kind === Track.Kind.Video) {
+                    this._state.avatarVideoEnabled = false;
+                    Logger.debug("🎭 Avatar video muted");
+                    this._emit("avatarVideoMuted", true);
+                }
+            })
+            .on(ParticipantEvent.TrackUnmuted, (track) => {
+                if (track.kind === Track.Kind.Video) {
+                    this._state.avatarVideoEnabled = true;
+                    Logger.debug("🎭 Avatar video unmuted");
+                    this._emit("avatarVideoMuted", false);
+                }
+            })
+            .on(ParticipantEvent.AttributesChanged, (changed) => {
+                if (CONFIG.debug.enabled) {
+                    Logger.debug(
+                        "🎭 Atributos del avatar worker cambiaron:",
+                        changed
+                    );
+                }
+                this._emit("avatarAttributesChanged", changed);
+            });
+
+        if (CONFIG.debug.enabled) {
+            Logger.debug(
+                "🔗 Avatar Worker listeners configurados para:",
+                participant.identity
+            );
+        }
+    }
+
     _handleAgentStateChange(agentState) {
         const statusMap = {
             listening: CONFIG.status.READY,
@@ -2316,7 +2474,7 @@ class ModernVoiceAgent {
             this._emit("agentStateChanged", agentState, uiStatus);
 
             if (CONFIG.debug.logVoiceActivityEvents) {
-                console.log(`🤖 Agent state: ${agentState} → ${uiStatus}`);
+                Logger.debug(`🤖 Agent state: ${agentState} → ${uiStatus}`);
             }
         }
     }
@@ -2346,7 +2504,7 @@ class ModernVoiceAgent {
             }
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log("🎵 Audio del agente cargado y configurado:", {
+                Logger.debug("🎵 Audio del agente cargado y configurado:", {
                     muted: audioElement.muted,
                     volume: audioElement.volume,
                     audioEnabled: this._state.audioEnabled,
@@ -2355,7 +2513,7 @@ class ModernVoiceAgent {
         });
 
         audioElement.addEventListener("error", (error) => {
-            console.error("❌ Error en audio del agente:", error);
+            Logger.error("❌ Error en audio del agente:", error);
             this._emit("error", "Error reproduciendo audio del agente");
         });
 
@@ -2363,6 +2521,60 @@ class ModernVoiceAgent {
         this._audioElements.push(audioElement);
 
         this._emit("agentAudioReady", track, publication);
+    }
+
+    /**
+     * Maneja track de video del avatar worker
+     *
+     * Procesa el video track recibido del avatar worker (Tavus, etc.)
+     * y lo prepara para renderizado en la UI de video call.
+     *
+     * @param {RemoteVideoTrack} track - Track de video del avatar
+     * @param {RemoteTrackPublication} publication - Publicación del track
+     * @private
+     */
+    _handleAvatarVideoTrack(track, publication) {
+        this._state.avatarVideoEnabled = true;
+
+        if (CONFIG.debug.showAudioEvents) {
+            Logger.debug("🎭 Video track del avatar recibido:", {
+                trackId: track.sid,
+                source: publication.source,
+                dimensions: track.dimensions,
+                muted: track.isMuted,
+            });
+        }
+
+        // ✅ LOGGING: Métricas de video para debugging
+        if (CONFIG.debug.showLatencyMetrics) {
+            const videoLatency =
+                performance.now() - this._metrics.connectionStartTime;
+            Logger.performance(
+                `⚡ Avatar video latency: ${videoLatency.toFixed(0)}ms`
+            );
+        }
+
+        // ✅ EMIT: Evento para VideoCallManager y App.js
+        this._emit("avatarVideoTrackReceived", track, publication);
+    }
+
+    /**
+     * Maneja track de audio del avatar worker (audio sincronizado con video)
+     *
+     * @param {RemoteAudioTrack} track - Track de audio del avatar
+     * @param {RemoteTrackPublication} publication - Publicación del track
+     * @private
+     */
+    _handleAvatarAudioTrack(track, publication) {
+        if (CONFIG.debug.showAudioEvents) {
+            Logger.debug(
+                "🎭 Audio track del avatar recibido (sincronizado con video)"
+            );
+        }
+
+        // El audio del avatar worker normalmente se maneja automáticamente
+        // pero podemos emitir evento para casos especiales
+        this._emit("avatarAudioTrackReceived", track, publication);
     }
 
     /**
@@ -2435,7 +2647,7 @@ class ModernVoiceAgent {
                 };
 
             default:
-                console.log(`🔧 Método RPC desconocido: ${methodName}`);
+                Logger.debug(`🔧 Método RPC desconocido: ${methodName}`);
                 return {
                     success: true,
                     message: `Method ${methodName} received but not implemented`,
@@ -2511,7 +2723,7 @@ class ModernVoiceAgent {
         if (connected && this._state.agentConnected) {
             setTimeout(() => {
                 this._emit("ready");
-                console.log(
+                Logger.debug(
                     "🔥 EVENTO READY EMITIDO DESDE _updateConnectionState"
                 );
             }, 100);
@@ -2527,7 +2739,7 @@ class ModernVoiceAgent {
             performance.now() - this._metrics.connectionStartTime;
 
         if (CONFIG.debug.showLatencyMetrics) {
-            console.log(
+            Logger.debug(
                 `⚡ Conexión establecida en ${this._metrics.connectionDuration.toFixed(
                     0
                 )}ms`
@@ -2540,7 +2752,7 @@ class ModernVoiceAgent {
      * @private
      */
     _handleInitializationError(error) {
-        console.error("❌ Error crítico de inicialización:", error);
+        Logger.error("❌ Error crítico de inicialización:", error);
 
         this._updateConnectionState(false);
         this._metrics.errorCount++;
@@ -2558,7 +2770,7 @@ class ModernVoiceAgent {
         const maxReconnects = 5; // Reasonable default
 
         if (this._metrics.reconnectCount >= maxReconnects) {
-            console.error("❌ Máximo número de reconexiones alcanzado");
+            Logger.error("❌ Máximo número de reconexiones alcanzado");
             return;
         }
 
@@ -2569,10 +2781,10 @@ class ModernVoiceAgent {
 
         const timeoutId = setTimeout(async () => {
             try {
-                console.log("🔄 Intentando reconexión automática...");
+                Logger.debug("🔄 Intentando reconexión automática...");
                 await this.initialize();
             } catch (error) {
-                console.error("❌ Reconexión automática falló:", error);
+                Logger.error("❌ Reconexión automática falló:", error);
             }
         }, delay);
 
@@ -2653,10 +2865,10 @@ class ModernVoiceAgent {
                 if (element.parentNode) element.parentNode.removeChild(element);
 
                 if (CONFIG.debug.showAudioEvents) {
-                    console.log(`🧹 Audio element ${index} limpiado del DOM`);
+                    Logger.debug(`🧹 Audio element ${index} limpiado del DOM`);
                 }
             } catch (error) {
-                console.error(
+                Logger.error(
                     `❌ Error limpiando elemento de audio ${index}:`,
                     error
                 );
@@ -2685,7 +2897,7 @@ class ModernVoiceAgent {
         this._agentParticipant = null;
 
         if (CONFIG.debug.showAudioEvents) {
-            console.log("🧹 Cleanup completo - TODOS los medios liberados");
+            Logger.debug("🧹 Cleanup completo - TODOS los medios liberados");
         }
     }
 
@@ -2717,7 +2929,7 @@ class ModernVoiceAgent {
      */
     _logRPC(direction, method, data) {
         if (CONFIG.debug.logRpcCalls) {
-            console.log(`[RPC ${direction}] ${method}:`, data);
+            Logger.debug(`[RPC ${direction}] ${method}:`, data);
         }
     }
 
@@ -2731,14 +2943,14 @@ class ModernVoiceAgent {
             handlers.forEach((handler) => {
                 try {
                     if (CONFIG.debug.showUIEvents) {
-                        console.log(
+                        Logger.debug(
                             `🎨 Evento UI: ${event}`,
                             args.length > 0 ? args : ""
                         );
                     }
                     handler(...args);
                 } catch (error) {
-                    console.error(
+                    Logger.error(
                         `❌ Error en event handler '${event}':`,
                         error
                     );
@@ -2803,11 +3015,11 @@ if (typeof window !== "undefined") {
     window.ModernVoiceAgent = ModernVoiceAgent;
 
     if (CONFIG.debug.enabled) {
-        console.log(
+        Logger.debug(
             "✅ ModernVoiceAgent v2.0.0-config-truth disponible globalmente"
         );
-        console.log("🎯 Usando CONFIG v4.0 como fuente de verdad única");
-        console.log("🔥 Zero duplicación de configuración garantizada");
-        console.log("📡 CONFIG.livekit.roomOptions → new Room() DIRECTO");
+        Logger.debug("🎯 Usando CONFIG v4.0 como fuente de verdad única");
+        Logger.debug("🔥 Zero duplicación de configuración garantizada");
+        Logger.debug("📡 CONFIG.livekit.roomOptions → new Room() DIRECTO");
     }
 }

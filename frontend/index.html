@@ -34,9 +34,15 @@
         <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
 
         <!-- Custom Styles -->
+        <!-- 1. PRIMERO: Sistema de tema centralizado -->
+        <link rel="stylesheet" href="css/theme.css" />
+
+        <!-- 2. SEGUNDO: Estilos principales -->
         <link rel="stylesheet" href="css/styles.css" />
-        <!-- ✨ Voice Call Module -->
+
+        <!-- 3. TERCERO: Módulo de voz -->
         <link rel="stylesheet" href="css/voice-call.css" />
+        <link rel="stylesheet" href="css/video-call.css" />
     </head>
     <body>
         <!-- Main App Container -->
@@ -94,7 +100,15 @@
                                 aria-hidden="true"
                             ></i>
                         </button>
-
+                        <!-- ✨ NUEVO: Video Camera Button -->
+                        <button
+                            id="videoCameraBtn"
+                            class="control-btn video-camera-btn"
+                            aria-label="Iniciar videollamada"
+                            title="Iniciar videollamada con avatar"
+                        >
+                            <i class="fas fa-video" aria-hidden="true"></i>
+                        </button>
                         <!-- Voice Call Button -->
                         <button
                             id="callBtn"
@@ -277,6 +291,156 @@
                 aria-live="polite"
                 aria-label="Subtítulos de la conversación"
             ></div>
+
+            <!-- ✨ VIDEO CALL OVERLAY - WhatsApp Style -->
+            <section
+                id="video-call-overlay"
+                class="video-call-overlay"
+                role="dialog"
+                aria-labelledby="video-call-title"
+                aria-modal="true"
+                aria-hidden="true"
+            >
+                <!-- Main Video Container -->
+                <div class="video-container">
+                    <!-- Avatar Video - Fullscreen Background -->
+                    <video
+                        id="avatar-video"
+                        class="avatar-video-main"
+                        autoplay
+                        playsinline
+                        muted
+                        aria-label="Video del avatar"
+                    ></video>
+
+                    <!-- Fallback para cuando no hay video del avatar -->
+                    <div id="avatar-fallback" class="avatar-video-fallback">
+                        <div class="avatar-placeholder">
+                            <img
+                                src="img/avatar.jpg"
+                                alt="Avatar del asistente"
+                                class="avatar-placeholder-image"
+                                onerror="this.style.display='none'"
+                            />
+                            <div class="avatar-placeholder-icon">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        </div>
+                        <div class="avatar-status-text">
+                            <span>Cargando video...</span>
+                        </div>
+                    </div>
+
+                    <!-- User Video - Picture in Picture -->
+                    <div class="user-pip-container">
+                        <video
+                            id="user-video"
+                            class="user-video-pip"
+                            autoplay
+                            playsinline
+                            muted
+                            aria-label="Tu video"
+                        ></video>
+
+                        <!-- Fallback para cuando no hay video del usuario -->
+                        <div
+                            id="user-video-fallback"
+                            class="user-video-fallback"
+                        >
+                            <i class="fas fa-user"></i>
+                        </div>
+
+                        <!-- PiP Controls -->
+                        <div class="pip-controls">
+                            <button
+                                id="pip-camera-toggle"
+                                class="pip-control-btn"
+                                aria-label="Alternar cámara"
+                                title="Encender/Apagar cámara"
+                            >
+                                <i class="fas fa-video"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Video Call Info Overlay -->
+                    <div class="video-call-info">
+                        <div class="video-call-header">
+                            <div class="video-call-title">
+                                <h2 id="video-call-title">Asistente Virtual</h2>
+                                <span class="video-call-status"
+                                    >Videollamada activa</span
+                                >
+                            </div>
+                            <div class="video-call-duration">
+                                <span id="video-duration">00:00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Voice Activity Indicator for Video -->
+                    <div
+                        id="video-voice-activity"
+                        class="video-voice-activity"
+                        style="display: none"
+                    >
+                        <div class="video-voice-indicator">
+                            <div class="voice-wave"></div>
+                            <div class="voice-wave"></div>
+                            <div class="voice-wave"></div>
+                        </div>
+                        <span class="video-voice-label">Escuchando...</span>
+                    </div>
+
+                    <!-- Video Call Controls - Floating Bottom -->
+                    <nav
+                        class="video-controls"
+                        role="navigation"
+                        aria-label="Controles de videollamada"
+                    >
+                        <button
+                            id="video-mute-btn"
+                            class="video-control-btn mute-btn"
+                            aria-label="Silenciar micrófono"
+                            title="Silenciar/Activar micrófono"
+                        >
+                            <i class="fas fa-microphone"></i>
+                        </button>
+
+                        <button
+                            id="video-camera-btn"
+                            class="video-control-btn camera-btn"
+                            aria-label="Alternar cámara"
+                            title="Encender/Apagar cámara"
+                        >
+                            <i class="fas fa-video"></i>
+                        </button>
+
+                        <button
+                            id="video-hangup-btn"
+                            class="video-control-btn hangup-btn"
+                            aria-label="Finalizar videollamada"
+                            title="Colgar videollamada"
+                        >
+                            <i class="fas fa-phone-slash"></i>
+                        </button>
+                    </nav>
+
+                    <!-- Video Subtitles -->
+                    <div
+                        id="video-subtitles"
+                        class="video-subtitles"
+                        style="display: none"
+                        role="status"
+                        aria-live="polite"
+                        aria-label="Subtítulos de la videollamada"
+                    >
+                        <div class="video-subtitle-content">
+                            <!-- Subtítulos aparecen aquí -->
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
 
         <!-- ✨ CONTAINERS FIJOS PARA ELEMENTOS DINÁMICOS -->
@@ -332,5 +496,7 @@
         <script src="js/ui-manager.js"></script>
         <script src="js/voice-agent-sdk.js"></script>
         <script src="js/app.js"></script>
+        <!-- ✨ Video Call Manager -->
+        <script src="js/video-call-manager.js"></script>
     </body>
 </html>

@@ -41,12 +41,12 @@ const CONFIG = {
      */
     livekit: {
         // URLs del servidor (producción/desarrollo)
-        // tokenEndpoint: "https://web-server-mona-e23l.onrender.com/getToken",
-        // wsUrl: "wss://monaquehabla-226n27am.livekit.cloud",
+        tokenEndpoint: "https://web-server-mona-e23l.onrender.com/getToken",
+        wsUrl: "wss://monaquehabla-226n27am.livekit.cloud",
 
         // URLs alternativas para desarrollo local
-        tokenEndpoint: "http://localhost:8000/getToken",
-        wsUrl: "ws://localhost:7880", // validar siempre en prepareConnection y connect de livekit buscar tokenData.url
+        // tokenEndpoint: "http://localhost:8000/getToken",
+        // wsUrl: "ws://localhost:7880", // validar siempre en prepareConnection y connect de livekit buscar tokenData.url
 
         /**
          * RoomOptions v2.13.6 OFICIAL - FUENTE DE VERDAD
@@ -204,6 +204,9 @@ const CONFIG = {
         status: "lk.agent.status",
         textStream: "lk.rpc.textStream",
         voiceMetrics: "lk.rpc.voiceMetrics",
+        agent: "lk.agent.command",
+        avatarControl: "lk.avatar.control",
+        avatarStatus: "lk.avatar.status",
     },
 
     /**
@@ -766,6 +769,10 @@ class Logger {
         if (CONFIG.debug.enabled && CONFIG.debug.logLevel === "debug") {
             console.log(`🔍 ${message}`, ...args);
         }
+    }
+
+    static warning(message, ...args) {
+        console.warn(`🔍 ${message}`, ...args);
     }
 
     static ui(message, ...args) {

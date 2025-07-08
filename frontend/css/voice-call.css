@@ -1,102 +1,112 @@
 /**
- * Voice Call Modal - CSS Module Separado
- * Compatible con tu sistema existente
- * Modos: Character.AI y WhatsApp Fullscreen
+ * 📞 Voice Call Modal v2.0 - Refactorizado con Sistema de Tema
+ *
+ * USANDO VARIABLES DE theme.css (responde automáticamente a modo claro/oscuro)
+ * Modos visuales: Character.AI y WhatsApp Fullscreen
+ * Compatible con voice-call.js para switching dinámico
+ *
+ * MODOS DISPONIBLES:
+ * - Character.AI: Interfaz centrada en branding con gradientes
+ * - WhatsApp: Experiencia fullscreen con avatar como fondo
+ *
+ * ESTRUCTURA:
+ * 1. Base Voice Call Overlay (común para ambos modos)
+ * 2. Modo Character.AI (brand-focused)
+ * 3. Modo WhatsApp (fullscreen experience)
+ * 4. Voice Activity Indicators (estados de voz)
+ * 5. Responsive Design
+ * 6. Animations & Transitions
  */
 
 /* =============================================
-   VOICE CALL DESIGN TOKENS
+   📞 BASE VOICE CALL OVERLAY
    ============================================= */
-:root {
-    /* Character.ai Colors */
-    --voice-char-primary: #1e1b4b;
-    --voice-char-secondary: #7c3aed;
-    --voice-char-accent: #3b82f6;
-    --voice-char-text: #ffffff;
-    --voice-char-text-secondary: rgba(255, 255, 255, 0.8);
 
-    /* WhatsApp Colors (complementan tus existentes) */
-    --voice-wa-overlay: rgba(11, 20, 26, 0.3);
-    --voice-wa-text: white;
-    --voice-wa-text-secondary: rgba(255, 255, 255, 0.9);
-
-    /* Voice Activity */
-    --voice-activity-active: rgba(0, 168, 132, 0.9);
-    --voice-activity-thinking: rgba(255, 171, 0, 0.9);
-
-    /* Voice Transitions */
-    --voice-transition-fast: 150ms ease-out;
-    --voice-transition-normal: 250ms ease-out;
-    --voice-transition-slow: 350ms ease-out;
-}
-
-/* =============================================
-   BASE VOICE CALL OVERLAY - PANTALLA COMPLETA
-   ============================================= */
-.call-overlay {
-    /* Mantener la base de tu CSS existente */
-    position: fixed;
-    inset: 0;
+/* Override del call-overlay base cuando está en modo específico */
+.call-overlay[class*="voice-mode"] {
+    /* Pantalla completa para modos específicos */
     width: 100vw;
     height: 100vh;
+    position: fixed;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
+
+    /* Transiciones suaves */
+    transition: all 250ms ease-out;
     opacity: 0;
     visibility: hidden;
-    transition: all var(--voice-transition-normal);
     pointer-events: none;
 }
 
-.call-overlay.active {
+.call-overlay[class*="voice-mode"].active {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
 }
 
+/* Content container base para modos específicos */
+.call-overlay[class*="voice-mode"] .call-content {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2rem 1.5rem;
+    margin: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    max-width: none;
+}
+
 /* =============================================
-   MODO 1: CHARACTER.AI STYLE
+   🤖 MODO CHARACTER.AI STYLE
    ============================================= */
 .call-overlay.voice-mode-character {
+    /* Gradiente dinámico usando variables de tema */
     background: radial-gradient(
         ellipse at top,
-        var(--voice-char-secondary) 0%,
-        var(--voice-char-primary) 50%,
-        var(--voice-char-accent) 100%
+        var(--theme-voice-char-secondary) 0%,
+        var(--theme-voice-char-primary) 50%,
+        var(--theme-voice-char-accent) 100%
     );
 }
 
 .call-overlay.voice-mode-character .call-content {
-    text-align: center;
+    justify-content: center;
     max-width: 400px;
     width: 90%;
-    padding: 2rem;
-    background: none;
-    border: none;
-    box-shadow: none;
-    animation: voiceSlideInCharacter var(--voice-transition-slow) ease-out;
+    margin: 0 auto;
+    animation: voiceSlideInCharacter 350ms ease-out;
 }
 
+/* Brand Section - Visible solo en Character.AI */
 .call-overlay.voice-mode-character .voice-brand-section {
-    margin-bottom: 3rem;
     display: block;
+    margin-bottom: 3rem;
 }
 
 .call-overlay.voice-mode-character .voice-brand-logo {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--theme-overlay-light);
     backdrop-filter: blur(10px);
-    border: 3px solid rgba(255, 255, 255, 0.2);
+    border: 3px solid var(--theme-overlay-medium);
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 1.5rem;
     font-size: 3rem;
-    color: var(--voice-char-text);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    color: var(--theme-text-primary);
+    box-shadow: 0 8px 32px var(--theme-overlay-heavy);
     position: relative;
     overflow: hidden;
 }
@@ -116,13 +126,13 @@
     align-items: center;
     justify-content: center;
     font-size: 3rem;
-    color: var(--voice-char-text);
+    color: var(--theme-text-primary);
     z-index: 1;
     opacity: 1;
     transition: opacity 0.2s ease;
 }
 
-/* Cuando la imagen se carga correctamente, ocultar el fallback */
+/* Ocultar fallback cuando imagen se carga */
 .call-overlay.voice-mode-character
     .voice-brand-image:not([style*="display: none"])
     + .voice-brand-fallback {
@@ -133,35 +143,39 @@
 .call-overlay.voice-mode-character .voice-brand-name {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--voice-char-text);
+    color: var(--theme-text-primary);
     margin: 0 0 0.5rem;
     letter-spacing: -0.02em;
 }
 
+/* Ocultar avatar container en modo Character.AI */
+.call-overlay.voice-mode-character .call-avatar-container {
+    display: none;
+}
+
+/* Estilos específicos para textos en Character.AI */
 .call-overlay.voice-mode-character .call-title {
-    color: var(--voice-char-text);
+    color: var(--theme-text-primary);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .call-overlay.voice-mode-character .call-status {
-    color: var(--voice-char-text-secondary);
+    color: var(--theme-text-secondary);
     font-size: 1.125rem;
     font-weight: 500;
     margin-bottom: 3rem;
 }
 
-/* Ocultar avatar section en modo character */
-.call-overlay.voice-mode-character .call-avatar-container,
-.call-overlay.voice-mode-character .avatar-section {
-    display: none;
-}
-
 /* =============================================
-   MODO 2: WHATSAPP FULLSCREEN STYLE
+   📱 MODO WHATSAPP FULLSCREEN STYLE
    ============================================= */
 .call-overlay.voice-mode-whatsapp {
-    background: var(--voice-wa-overlay);
+    /* Overlay base usando variables de tema */
+    background: var(--theme-voice-wa-overlay);
 }
 
+/* Avatar como fondo de pantalla completa */
 .call-overlay.voice-mode-whatsapp.has-avatar {
     background-size: cover;
     background-position: center;
@@ -172,127 +186,80 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--theme-overlay-heavy);
     backdrop-filter: blur(1px) brightness(0.8);
     -webkit-backdrop-filter: blur(1px) brightness(0.8);
 }
 
-.call-overlay.voice-mode-whatsapp .call-content {
-    position: relative;
-    z-index: 10;
-    /* PANTALLA COMPLETA - Sin card flotante */
-    background: none;
-    border: none;
-    border-radius: 0;
-    padding: 2rem 1.5rem;
-    text-align: center;
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    box-shadow: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    animation: voiceFadeInWhatsApp var(--voice-transition-normal) ease-out;
-}
-
+/* Ocultar brand section en WhatsApp */
 .call-overlay.voice-mode-whatsapp .voice-brand-section {
     display: none;
 }
 
-.call-overlay.voice-mode-whatsapp .call-avatar-container,
-.call-overlay.voice-mode-whatsapp .avatar-section {
+/* Ocultar avatar container (ya está de fondo) */
+.call-overlay.voice-mode-whatsapp .call-avatar-container {
     display: none;
-    /* Avatar grande no necesario cuando está de fondo */
 }
 
+/* Info centrada con sombras para legibilidad */
 .call-overlay.voice-mode-whatsapp .call-info {
     margin-top: auto;
     margin-bottom: 1rem;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    text-shadow: 0 2px 8px var(--theme-overlay-heavy);
 }
 
 .call-overlay.voice-mode-whatsapp .call-title {
-    color: var(--voice-wa-text);
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    color: var(--theme-text-primary);
+    text-shadow: 0 2px 8px var(--theme-overlay-heavy);
     font-size: 1.75rem;
     font-weight: 600;
 }
 
 .call-overlay.voice-mode-whatsapp .call-status {
-    color: var(--voice-wa-text-secondary);
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    color: var(--theme-text-secondary);
+    text-shadow: 0 2px 8px var(--theme-overlay-heavy);
     font-size: 1.125rem;
     font-weight: 500;
     opacity: 0.9;
 }
 
+/* Controles con margen para safe area */
 .call-overlay.voice-mode-whatsapp .call-controls {
     margin-bottom: calc(2rem + env(safe-area-inset-bottom));
 }
+
 /* =============================================
-   🎤 USER VOICE ACTIVITY - Solo cuando habla
+   🎤 VOICE ACTIVITY INDICATORS
    ============================================= */
 
-.voice-activity-container {
-    /* Posición: Top-center como en las imágenes */
+/* Voice Activity específico para modos de llamada */
+.call-overlay[class*="voice-mode"] .voice-activity {
     position: absolute;
     top: calc(1rem + env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
-
-    /* Layout: Flexbox vertical centrado */
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-
-    /* Z-index: Por encima del contenido */
+    justify-content: center;
     z-index: 1020;
-
-    /* Transiciones suaves */
-    transition: all var(--voice-transition-normal);
-
-    /* Oculto por defecto - solo visible cuando usuario habla */
-    opacity: 0;
-    visibility: hidden;
 }
 
-.voice-activity-container.active {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* 🟢 Indicador visual del micrófono */
-.user-mic-indicator {
-    /* Tamaño y forma */
+.call-overlay[class*="voice-mode"] .voice-activity-content {
     width: 24px;
     height: 24px;
+    background: var(--theme-voice-activity);
     border-radius: 50%;
-
-    /* Color verde WhatsApp - Usuario hablando */
-    background: rgba(0, 168, 132, 0.95);
-
-    /* Bordes y sombras */
-    border: 2px solid rgba(255, 255, 255, 0.4);
+    border: 2px solid var(--theme-overlay-medium);
     box-shadow: 0 2px 8px rgba(0, 168, 132, 0.4),
-        0 0 0 4px rgba(0, 168, 132, 0.15);
-
-    /* Animación sutil de pulso */
-    animation: userMicPulse 2s infinite ease-in-out;
-
-    /* Posición relativa para punto interno */
-    position: relative;
+        0 0 0 4px rgba(0, 168, 132, 0.1);
+    animation: voiceActivityPulse 2s infinite ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Punto blanco interno */
-.user-mic-indicator::after {
+.call-overlay[class*="voice-mode"] .voice-activity-content::after {
     content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-
     width: 8px;
     height: 8px;
     background: white;
@@ -300,20 +267,190 @@
     opacity: 0.9;
 }
 
-/* 📝 Label del usuario */
-.user-mic-label {
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-medium);
-    color: rgba(255, 255, 255, 0.9);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+/* Estado thinking */
+.call-overlay[class*="voice-mode"] .voice-activity-content.thinking {
+    background: var(--theme-voice-thinking);
+    box-shadow: 0 2px 8px rgba(255, 171, 0, 0.4),
+        0 0 0 4px rgba(255, 171, 0, 0.1);
+    animation: voiceThinkingPulse 1.5s infinite ease-in-out;
+}
 
-    /* Texto centrado */
-    text-align: center;
-    white-space: nowrap;
+/* Voice Activity Label */
+.call-overlay[class*="voice-mode"] .voice-activity-label {
+    font-size: 0.75rem;
+    color: var(--theme-text-primary);
+    font-weight: 500;
+    margin-top: 4px;
+    text-shadow: 0 1px 2px var(--theme-overlay-heavy);
+}
 
-    /* Evitar selección */
-    user-select: none;
-    -webkit-user-select: none;
+/* =============================================
+   🎛️ CALL CONTROLS ENHANCEMENTS
+   ============================================= */
+
+/* Mejoras para botones en modos específicos */
+.call-overlay[class*="voice-mode"] .call-control-btn {
+    transition: all 150ms ease-out;
+    backdrop-filter: blur(10px);
+    border: 2px solid var(--theme-overlay-light);
+}
+
+.call-overlay[class*="voice-mode"] .call-control-btn:hover {
+    transform: scale(1.05);
+    border-color: var(--theme-overlay-medium);
+}
+
+.call-overlay[class*="voice-mode"] .call-control-btn:active {
+    transform: scale(0.95);
+}
+
+/* =============================================
+   🎬 ANIMATIONS ESPECÍFICAS DE VOICE
+   ============================================= */
+
+@keyframes voiceSlideInCharacter {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes voiceFadeInWhatsApp {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes voiceActivityPulse {
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(0, 168, 132, 0.4),
+            0 0 0 4px rgba(0, 168, 132, 0.1);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 168, 132, 0.6),
+            0 0 0 8px rgba(0, 168, 132, 0.2);
+    }
+}
+
+@keyframes voiceThinkingPulse {
+    0%,
+    100% {
+        opacity: 0.8;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+/* =============================================
+   📱 RESPONSIVE DESIGN ESPECÍFICO
+   ============================================= */
+
+@media (max-width: 480px) {
+    .call-overlay.voice-mode-character .call-content {
+        padding: 1.5rem;
+    }
+
+    .call-overlay.voice-mode-character .voice-brand-name {
+        font-size: 1.75rem;
+    }
+
+    .call-overlay.voice-mode-character .voice-brand-logo {
+        width: 100px;
+        height: 100px;
+    }
+
+    .call-overlay.voice-mode-whatsapp .call-content {
+        padding: 1.5rem 1rem;
+    }
+
+    .call-overlay.voice-mode-whatsapp .call-title {
+        font-size: 1.5rem;
+    }
+
+    .call-overlay.voice-mode-whatsapp .call-status {
+        font-size: 1rem;
+    }
+
+    .call-overlay[class*="voice-mode"] .voice-activity {
+        top: calc(0.75rem + env(safe-area-inset-top));
+    }
+}
+
+@media (min-width: 768px) {
+    .call-overlay.voice-mode-character .call-content {
+        max-width: 500px;
+    }
+
+    .call-overlay.voice-mode-whatsapp .call-title {
+        font-size: 2rem;
+    }
+
+    .call-overlay.voice-mode-whatsapp .call-status {
+        font-size: 1.25rem;
+    }
+}
+
+/* =============================================
+   🔧 UTILIDADES Y OVERRIDES
+   ============================================= */
+
+/* Asegurar que voice activity esté visible solo cuando call overlay está activo */
+.call-overlay:not(.active) .voice-activity {
+    display: none !important;
+}
+
+.call-overlay.active[class*="voice-mode"] .voice-activity {
+    display: flex;
+}
+
+/* Ocultar elementos no necesarios en modos específicos */
+.call-overlay[class*="voice-mode"] .welcome-message {
+    display: none;
+}
+
+/* Clase de utilidad para ocultar elementos */
+.voice-mode-hidden {
+    display: none !important;
+}
+
+.voice-mode-visible {
+    display: block !important;
+}
+
+/* =============================================
+   🎨 THEME ADAPTATIONS
+   ============================================= */
+
+/* Adaptaciones adicionales que responden automáticamente al tema */
+.call-overlay.voice-mode-character .voice-brand-logo {
+    /* En modo claro, el fondo será más translúcido */
+    background: var(--theme-overlay-light);
+    border-color: var(--theme-overlay-medium);
+}
+
+.call-overlay.voice-mode-whatsapp::before {
+    /* En modo claro, overlay más claro */
+    background: var(--theme-overlay-heavy);
+}
+
+/* Text shadows que se adaptan al tema */
+.call-overlay.voice-mode-whatsapp .call-title,
+.call-overlay.voice-mode-whatsapp .call-status,
+.call-overlay[class*="voice-mode"] .voice-activity-label {
+    text-shadow: 0 2px 8px var(--theme-overlay-heavy);
 }
 
 /* =============================================
@@ -418,7 +555,58 @@
         content: "";
     }
 }
+/* 🟢 Indicador visual del micrófono */
+.user-mic-indicator {
+    /* Tamaño y forma */
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
 
+    /* Color verde WhatsApp - Usuario hablando */
+    background: rgba(0, 168, 132, 0.95);
+
+    /* Bordes y sombras */
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 2px 8px rgba(0, 168, 132, 0.4),
+        0 0 0 4px rgba(0, 168, 132, 0.15);
+
+    /* Animación sutil de pulso */
+    animation: userMicPulse 2s infinite ease-in-out;
+
+    /* Posición relativa para punto interno */
+    position: relative;
+}
+
+/* Punto blanco interno */
+.user-mic-indicator::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    opacity: 0.9;
+}
+
+/* 📝 Label del usuario */
+.user-mic-label {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+    /* Texto centrado */
+    text-align: center;
+    white-space: nowrap;
+
+    /* Evitar selección */
+    user-select: none;
+    -webkit-user-select: none;
+}
 /* =============================================
    🎨 VARIANTE ALTERNATIVA - Puntos que pulsan
    ============================================= */
@@ -482,232 +670,5 @@
         font-weight: var(--font-weight-semibold);
         padding: 0.375rem 0;
         letter-spacing: -0.02em;
-    }
-}
-
-/* =============================================
-   🎭 EFECTOS ADICIONALES - Hover y Focus
-   ============================================= */
-
-/* 🎯 Efecto sutil en hover (solo en desktop) */
-@media (hover: hover) {
-    .bot-status-text:hover {
-        transform: scale(1.02);
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-    }
-}
-
-/* ♿ Accessibility: Respeta preferencias de movimiento reducido */
-@media (prefers-reduced-motion: reduce) {
-    .bot-status-text .animated-dots::after,
-    .bot-status-text .pulsing-dots .dot {
-        animation: none;
-    }
-
-    .bot-status-text .animated-dots::after {
-        content: "..."; /* Puntos estáticos */
-    }
-
-    .bot-status-text .pulsing-dots .dot {
-        opacity: 1; /* Puntos siempre visibles */
-    }
-}
-
-/* =============================================
-   ANIMACIONES
-   ============================================= */
-
-/* Animación del indicador de usuario */
-@keyframes userMicPulse {
-    0%,
-    100% {
-        transform: scale(1);
-        box-shadow: 0 2px 8px rgba(0, 168, 132, 0.4),
-            0 0 0 4px rgba(0, 168, 132, 0.15);
-    }
-
-    50% {
-        transform: scale(1.05);
-        box-shadow: 0 4px 12px rgba(0, 168, 132, 0.6),
-            0 0 0 6px rgba(0, 168, 132, 0.25);
-    }
-}
-
-/* =============================================
-   VOICE BRAND SECTION (Solo Character.AI)
-   ============================================= */
-.voice-brand-section {
-    display: none;
-    /* Hidden by default */
-}
-
-/* =============================================
-   CALL CONTROLS OVERRIDE PARA VOICE
-   ============================================= */
-.call-overlay .call-control-btn {
-    /* Mejorar los botones existentes para voice modes */
-    transition: all var(--voice-transition-fast);
-    backdrop-filter: blur(10px);
-}
-
-.call-overlay .call-control-btn:hover {
-    transform: scale(1.05);
-}
-
-.call-overlay .call-control-btn:active {
-    transform: scale(0.95);
-}
-
-/* =============================================
-   ANIMATIONS ESPECÍFICAS DE VOICE
-   ============================================= */
-@keyframes voiceSlideInCharacter {
-    from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.9);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes voiceFadeInWhatsApp {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes voiceActivityPulse {
-    0%,
-    100% {
-        transform: scale(1);
-        box-shadow: 0 2px 8px rgba(0, 168, 132, 0.4),
-            0 0 0 4px rgba(0, 168, 132, 0.1);
-    }
-
-    50% {
-        transform: scale(1.1);
-        box-shadow: 0 4px 12px rgba(0, 168, 132, 0.6),
-            0 0 0 8px rgba(0, 168, 132, 0.2);
-    }
-}
-
-@keyframes voiceThinkingPulse {
-    0%,
-    100% {
-        opacity: 0.8;
-        transform: scale(1);
-    }
-
-    50% {
-        opacity: 1;
-        transform: scale(1.05);
-    }
-}
-
-/* =============================================
-   RESPONSIVE ESPECÍFICO PARA VOICE
-   ============================================= */
-@media (max-width: 480px) {
-    .call-overlay.voice-mode-character .call-content {
-        padding: 1.5rem;
-    }
-
-    .call-overlay.voice-mode-character .voice-brand-name {
-        font-size: 1.75rem;
-    }
-
-    .call-overlay.voice-mode-whatsapp .call-content {
-        padding: 1.5rem 1rem;
-    }
-
-    .call-overlay.voice-mode-whatsapp .call-title {
-        font-size: 1.5rem;
-    }
-
-    .call-overlay.voice-mode-whatsapp .call-status {
-        font-size: 1rem;
-    }
-
-    .voice-activity {
-        top: calc(0.75rem + env(safe-area-inset-top));
-    }
-}
-
-@media (min-width: 768px) {
-    .call-overlay.voice-mode-whatsapp .call-title {
-        font-size: 2rem;
-    }
-
-    .call-overlay.voice-mode-whatsapp .call-status {
-        font-size: 1.25rem;
-    }
-}
-
-/* =============================================
-   UTILIDADES VOICE MODE
-   ============================================= */
-.voice-mode-hidden {
-    display: none !important;
-}
-
-.voice-mode-visible {
-    display: block !important;
-}
-
-/* Override para elementos específicos del voice mode */
-.call-overlay[class*="voice-mode"] .welcome-message {
-    display: none;
-}
-
-/* Asegurar que el voice activity esté visible en ambos modos */
-.call-overlay.active .voice-activity {
-    display: flex;
-}
-
-.call-overlay:not(.active) .voice-activity {
-    display: none;
-}
-/* =============================================
-   RESPONSIVE DESIGN
-   ============================================= */
-
-/* Mobile: Ajustar tamaño en pantallas pequeñas */
-@media (max-width: 480px) {
-    .user-mic-indicator {
-        width: 20px;
-        height: 20px;
-    }
-
-    .user-mic-indicator::after {
-        width: 6px;
-        height: 6px;
-    }
-
-    .user-mic-label {
-        font-size: 10px;
-    }
-
-    .voice-activity-container {
-        top: calc(0.75rem + env(safe-area-inset-top));
-    }
-}
-
-/* Desktop: Indicador ligeramente más grande */
-@media (min-width: 768px) {
-    .user-mic-indicator {
-        width: 28px;
-        height: 28px;
-    }
-
-    .user-mic-indicator::after {
-        width: 10px;
-        height: 10px;
     }
 }

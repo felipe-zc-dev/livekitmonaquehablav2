@@ -1,0 +1,771 @@
+/**
+ * 📹 Video Call Modal - WhatsApp Style v1.0
+ *
+ * USANDO SISTEMA DE TEMA CENTRALIZADO (theme.css)
+ * Diseño WhatsApp: Avatar fullscreen + Usuario PiP + Controles floating
+ * Compatible con modo oscuro/claro automático
+ *
+ * ESTRUCTURA:
+ * 1. Video Call Overlay Base
+ * 2. Avatar Video Fullscreen
+ * 3. User Video PiP (Picture in Picture)
+ * 4. Video Controls Floating
+ * 5. Voice Activity Indicators
+ * 6. Responsive Design
+ * 7. Animations & Transitions
+ */
+
+/* =============================================
+   📹 VIDEO CALL OVERLAY BASE
+   ============================================= */
+
+.video-call-overlay {
+    /* Fullscreen modal */
+    position: fixed;
+    inset: 0;
+    z-index: 2000; /* Mayor que call-overlay (1000) */
+
+    /* Background negro sólido como WhatsApp */
+    background: #000000;
+
+    /* Estados de visibilidad */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    /* Transiciones suaves */
+    transition: all 300ms ease-out;
+
+    /* Flexbox para centrar contenido */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-call-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Container principal del video */
+.video-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000000;
+}
+
+/* =============================================
+   🤖 AVATAR VIDEO - FULLSCREEN MAIN
+   ============================================= */
+
+.avatar-video-main {
+    /* Fullscreen como fondo */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    /* Object fit para mantener aspecto */
+    object-fit: cover;
+    object-position: center;
+
+    /* Z-index bajo para que esté atrás */
+    z-index: 1;
+
+    /* Transición suave para fade in */
+    opacity: 0;
+    transition: opacity 500ms ease-out;
+}
+
+.avatar-video-main.loaded {
+    opacity: 1;
+}
+
+/* Fallback cuando no hay video del avatar */
+.avatar-video-fallback {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+
+    /* Fondo usando variables de tema */
+    background: linear-gradient(
+        135deg,
+        var(--theme-voice-char-primary) 0%,
+        var(--theme-voice-char-secondary) 50%,
+        var(--theme-voice-char-accent) 100%
+    );
+
+    /* Centrar contenido */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    /* Texto */
+    color: var(--theme-text-primary);
+    text-align: center;
+}
+
+.avatar-placeholder {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: var(--theme-overlay-light);
+    backdrop-filter: blur(10px);
+    border: 4px solid var(--theme-overlay-medium);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+
+    position: relative;
+    overflow: hidden;
+
+    /* Sombra */
+    box-shadow: 0 10px 30px var(--theme-overlay-heavy);
+}
+
+.avatar-placeholder-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: relative;
+    z-index: 2;
+}
+
+.avatar-placeholder-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    color: var(--theme-text-primary);
+    z-index: 1;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+/* Ocultar icono cuando hay imagen */
+.avatar-placeholder-image:not([style*="display: none"])
+    + .avatar-placeholder-icon {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.avatar-status-text {
+    font-size: 1.25rem;
+    font-weight: 500;
+    opacity: 0.9;
+
+    /* Animación de pulso */
+    animation: pulse 2s infinite;
+}
+
+/* =============================================
+   👤 USER VIDEO - PICTURE IN PICTURE
+   ============================================= */
+
+.user-pip-container {
+    /* Posición WhatsApp style - Esquina superior derecha */
+    position: absolute;
+    /* top: calc(1rem + env(safe-area-inset-top));
+    right: 1rem; */
+    top: auto !important; /* <— desactiva el top anterior */
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    right: 1rem;
+
+    /* Tamaño PiP */
+    width: 120px;
+    height: 160px;
+
+    /* Estilo */
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid var(--theme-overlay-medium);
+
+    /* Shadow para destacar */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+
+    /* Z-index alto */
+    z-index: 10;
+
+    /* Transiciones */
+    transition: all 200ms ease-out;
+
+    /* Background fallback */
+    background: var(--theme-bg-tertiary);
+}
+
+.user-pip-container:hover {
+    transform: scale(1.05);
+    border-color: var(--theme-primary);
+}
+
+.user-video-pip {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+
+    /* Transición para fade in */
+    opacity: 0;
+    transition: opacity 300ms ease-out;
+}
+
+.user-video-pip.loaded {
+    opacity: 1;
+}
+
+/* Fallback cuando no hay video del usuario */
+.user-video-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: var(--theme-bg-quaternary);
+    color: var(--theme-text-secondary);
+    font-size: 2rem;
+
+    /* Solo visible cuando no hay video */
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.user-video-pip.loaded + .user-video-fallback {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Controles del PiP */
+.pip-controls {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+
+    display: flex;
+    gap: 4px;
+
+    /* Inicialmente oculto */
+    opacity: 0;
+    transform: translateY(100%);
+    transition: all 200ms ease-out;
+}
+
+.user-pip-container:hover .pip-controls {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.pip-control-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 4px;
+    background: var(--theme-overlay-heavy);
+    color: white;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 0.75rem;
+    cursor: pointer;
+
+    transition: all 150ms ease-out;
+}
+
+.pip-control-btn:hover {
+    background: var(--theme-primary);
+    transform: scale(1.1);
+}
+
+/* =============================================
+   📱 VIDEO CALL INFO OVERLAY
+   ============================================= */
+
+.video-call-info {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 5;
+
+    /* Gradient overlay para legibilidad */
+    background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.7) 0%,
+        rgba(0, 0, 0, 0.3) 50%,
+        transparent 100%
+    );
+
+    padding: calc(1rem + env(safe-area-inset-top)) 1rem 2rem;
+}
+
+.video-call-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.video-call-title h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+    margin: 0 0 0.25rem;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.video-call-status {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.video-call-duration {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+
+    /* Fondo para destacar */
+    background: rgba(0, 0, 0, 0.4);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    backdrop-filter: blur(10px);
+}
+
+/* =============================================
+   🎤 VOICE ACTIVITY INDICATOR
+   ============================================= */
+
+.video-voice-activity {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 15;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+
+    /* Background */
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 1rem 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.video-voice-indicator {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.voice-wave {
+    width: 4px;
+    height: 20px;
+    background: var(--theme-success);
+    border-radius: 2px;
+    animation: voiceWave 1.2s infinite ease-in-out;
+}
+
+.voice-wave:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.voice-wave:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes voiceWave {
+    0%,
+    100% {
+        height: 8px;
+        opacity: 0.6;
+    }
+    50% {
+        height: 24px;
+        opacity: 1;
+    }
+}
+
+.video-voice-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* =============================================
+   🎛️ VIDEO CONTROLS - FLOATING BOTTOM
+   ============================================= */
+
+.video-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+
+    /* Gradient overlay */
+    background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.8) 0%,
+        rgba(0, 0, 0, 0.4) 50%,
+        transparent 100%
+    );
+
+    /* Layout */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+
+    /* Padding with safe area */
+    padding: 2rem 1rem calc(2rem + env(safe-area-inset-bottom));
+}
+
+.video-control-btn {
+    width: 64px;
+    height: 64px;
+    border: none;
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 1.25rem;
+    cursor: pointer;
+
+    /* Transitions */
+    transition: all 150ms ease-out;
+
+    /* Shadow */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+
+    /* Backdrop filter */
+    backdrop-filter: blur(10px);
+
+    /* Tap highlight */
+    -webkit-tap-highlight-color: transparent;
+}
+
+.video-control-btn:hover {
+    transform: scale(1.05);
+}
+
+.video-control-btn:active {
+    transform: scale(0.95);
+}
+
+.video-control-btn:focus-visible {
+    outline: 3px solid white;
+    outline-offset: 4px;
+}
+
+/* Specific button styles */
+.video-control-btn.mute-btn {
+    background: var(--theme-bg-quaternary);
+    color: white;
+}
+
+.video-control-btn.mute-btn.muted {
+    background: var(--theme-error);
+}
+
+.video-control-btn.camera-btn {
+    background: var(--theme-bg-quaternary);
+    color: white;
+}
+
+.video-control-btn.camera-btn.disabled {
+    background: var(--theme-error);
+}
+
+.video-control-btn.hangup-btn {
+    background: var(--theme-error);
+    color: white;
+}
+
+.video-control-btn.hangup-btn:hover {
+    background: var(--theme-error);
+    filter: brightness(1.1);
+}
+
+/* =============================================
+   📺 VIDEO SUBTITLES
+   ============================================= */
+
+.video-subtitles {
+    position: absolute;
+    bottom: 120px;
+    left: 1rem;
+    right: 1rem;
+    z-index: 15;
+
+    text-align: center;
+    pointer-events: none;
+}
+
+.video-subtitle-content {
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.4;
+
+    /* Shadow */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+    /* Backdrop filter */
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    /* Max width */
+    max-width: 400px;
+    margin: 0 auto;
+
+    /* Animation */
+    animation: subtitleFadeIn 200ms ease-out;
+}
+
+@keyframes subtitleFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =============================================
+   📹 HEADER VIDEO BUTTON
+   ============================================= */
+
+.video-camera-btn {
+    background-color: var(--theme-primary);
+    color: white;
+}
+
+.video-camera-btn:hover {
+    background-color: var(--theme-primary-hover);
+}
+
+.video-camera-btn.active {
+    background-color: var(--theme-error);
+    animation: pulse 2s infinite;
+}
+
+/* =============================================
+   📱 RESPONSIVE DESIGN
+   ============================================= */
+
+/* Mobile Portrait */
+@media (max-width: 480px) {
+    .user-pip-container {
+        width: 100px;
+        height: 133px;
+        top: calc(0.75rem + env(safe-area-inset-top));
+        right: 0.75rem;
+    }
+
+    .video-controls {
+        gap: 1.5rem;
+        padding: 1.5rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+    }
+
+    .video-control-btn {
+        width: 56px;
+        height: 56px;
+        font-size: 1.125rem;
+    }
+
+    .video-call-info {
+        padding: calc(0.75rem + env(safe-area-inset-top)) 0.75rem 1.5rem;
+    }
+
+    .video-call-title h2 {
+        font-size: 1.125rem;
+    }
+}
+
+/* Mobile Landscape */
+@media (max-height: 500px) and (orientation: landscape) {
+    .user-pip-container {
+        width: 80px;
+        height: 107px;
+    }
+
+    .video-controls {
+        padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+        gap: 1rem;
+    }
+
+    .video-control-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 1rem;
+    }
+
+    .video-call-info {
+        padding: 0.5rem 1rem 1rem;
+    }
+
+    .video-subtitles {
+        bottom: 80px;
+    }
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+    .user-pip-container {
+        width: 140px;
+        height: 187px;
+        top: calc(1.5rem + env(safe-area-inset-top));
+        right: 1.5rem;
+    }
+
+    .video-controls {
+        gap: 2.5rem;
+    }
+
+    .video-control-btn {
+        width: 72px;
+        height: 72px;
+        font-size: 1.5rem;
+    }
+
+    .video-call-title h2 {
+        font-size: 1.5rem;
+    }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+    .user-pip-container {
+        width: 160px;
+        height: 213px;
+        top: 2rem;
+        right: 2rem;
+    }
+
+    .video-controls {
+        gap: 3rem;
+    }
+
+    .video-call-info {
+        padding: 2rem 2rem 3rem;
+    }
+}
+
+/* =============================================
+   ♿ ACCESIBILIDAD
+   ============================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .video-call-overlay,
+    .video-control-btn,
+    .user-pip-container,
+    .avatar-video-main,
+    .user-video-pip {
+        transition: none;
+    }
+
+    .voice-wave,
+    .avatar-status-text {
+        animation: none;
+    }
+}
+
+@media (prefers-contrast: high) {
+    .video-control-btn {
+        border: 2px solid white;
+    }
+
+    .user-pip-container {
+        border-width: 3px;
+    }
+
+    .video-subtitle-content {
+        background: #000000;
+        border: 2px solid white;
+    }
+}
+
+/* =============================================
+   🎬 ANIMATIONS & TRANSITIONS
+   ============================================= */
+
+/* Fade in overlay */
+@keyframes videoOverlayFadeIn {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(10px);
+    }
+}
+
+/* Controls slide up */
+@keyframes controlsSlideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* PiP bounce in */
+@keyframes pipBounceIn {
+    0% {
+        transform: scale(0) translateX(100%);
+        opacity: 0;
+    }
+    70% {
+        transform: scale(1.1) translateX(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Apply animations when overlay becomes active */
+.video-call-overlay.active {
+    animation: videoOverlayFadeIn 300ms ease-out;
+}
+
+.video-call-overlay.active .video-controls {
+    animation: controlsSlideUp 400ms ease-out 100ms both;
+}
+
+.video-call-overlay.active .user-pip-container {
+    animation: pipBounceIn 500ms ease-out 200ms both;
+}
