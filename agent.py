@@ -19,7 +19,7 @@ from livekit.agents import (
     metrics,
 )
 from livekit.agents.voice import MetricsCollectedEvent
-from livekit.plugins import aws, deepgram, elevenlabs, silero, tavus
+from livekit.plugins import aws, deepgram, elevenlabs, silero
 
 from agents.conversational_agent import ConversationalMasterAgent
 from core.config import SystemConfig, UserData, create_user_data, load_persona_config
@@ -141,12 +141,12 @@ async def entrypoint(ctx: JobContext) -> None:
             max_tool_steps=2,
         )
         # 🎭 CREAR AVATAR TAVUS PRIMERO
-        try:
-            avatar = tavus.AvatarSession(replica_id="r9c55f9312fb", persona_id="pb4c3a46bb80")
-            await avatar.start(session, room=ctx.room)
-            print("🎭 Avatar Tavus activado automáticamente")
-        except Exception as e:
-            print(f"❌ Error activando avatar: {e}")
+        # try:
+        #     avatar = tavus.AvatarSession(replica_id="r9c55f9312fb", persona_id="pb4c3a46bb80")
+        #     await avatar.start(session, room=ctx.room)
+        #     print("🎭 Avatar Tavus activado automáticamente")
+        # except Exception as e:
+        #     print(f"❌ Error activando avatar: {e}")
 
         # Configurar métricas
         monitor = get_monitor()
