@@ -1169,7 +1169,6 @@ class ModernVoiceAgent {
             Logger.error("❌ Error durante desconexión:", error);
         }
     }
-
     /**
      * ✅ NUEVO: Obtiene el avatar worker participant
      * @returns {RemoteParticipant|null} Avatar worker o null
@@ -1806,7 +1805,7 @@ class ModernVoiceAgent {
     // ==========================================
 
     /**
-     * Handler: Participante conectado con soporte para Avatar Workers
+     * Handler: Participante conectado
      * @private
      */
     _onParticipantConnected(participant) {
@@ -1859,7 +1858,7 @@ class ModernVoiceAgent {
     }
 
     /**
-     * Handler: Participante desconectado con soporte para Avatar Workers
+     * Handler: Participante desconectado
      * @private
      */
     _onParticipantDisconnected(participant) {
@@ -1888,7 +1887,7 @@ class ModernVoiceAgent {
     }
 
     /**
-     * Handler: Track suscrito con soporte para Video Avatar
+     * Handler: Track suscrito - VERSIÓN CORREGIDA
      * @private
      */
     _onTrackSubscribed(track, publication, participant) {
@@ -1901,25 +1900,44 @@ class ModernVoiceAgent {
             );
         }
 
-        // ✅ MEJORADO: Detectar tipo de agente para manejar tracks apropiados
-        const agentInfo = this._isAgentParticipant(participant);
+        // ✅ MANTENER: Lógica simple que funcionaba para AUDIO
+        if (
+            track.kind === Track.Kind.Audio &&
+            this._isAgentParticipant(participant)
+        ) {
+            this._handleAgentAudioTrack(track, publication);
+            console.log(
+                "✅ Audio track del agente manejado:",
+                participant.identity
+            );
+        }
 
-        if (agentInfo.isAgent) {
-            if (agentInfo.type === "main" && track.kind === Track.Kind.Audio) {
-                // ✅ MANTENER: Audio del agente principal (lógica existente)
-                this._handleAgentAudioTrack(track, publication);
-            } else if (
-                agentInfo.type === "avatar" &&
-                track.kind === Track.Kind.Video
+        // ✅ AGREGAR: Lógica adicional para VIDEO de avatar (opcional)
+        if (track.kind === Track.Kind.Video) {
+            // Detectar si es avatar worker (Tavus, etc.)
+            const agentInfo = this._isAgentParticipant(participant);
+
+            if (
+                agentInfo &&
+                typeof agentInfo === "object" &&
+                agentInfo.type === "avatar"
             ) {
-                // ✅ NUEVO: Video del avatar worker
                 this._handleAvatarVideoTrack(track, publication);
-            } else if (
-                agentInfo.type === "avatar" &&
-                track.kind === Track.Kind.Audio
+                console.log(
+                    "✅ Video track del avatar manejado:",
+                    participant.identity
+                );
+            }
+            // También verificar por identity específica de Tavus
+            else if (
+                participant.identity === "tavus-avatar-agent" ||
+                participant.identity.includes("avatar")
             ) {
-                // ✅ NUEVO: Audio del avatar worker (sincronizado con video)
-                this._handleAvatarAudioTrack(track, publication);
+                this._handleAvatarVideoTrack(track, publication);
+                console.log(
+                    "✅ Video track del avatar manejado (fallback):",
+                    participant.identity
+                );
             }
         }
 
@@ -2325,15 +2343,7 @@ class ModernVoiceAgent {
     }
 
     /**
-     * Verifica si un participante es agente y determina su tipo según LiveKit oficial
-     *
-     * BASADO EN: https://docs.livekit.io/agents/integrations/avatar/
-     * - Agent principal: Kind.Agent + lk.publish_on_behalf === null
-     * - Avatar worker: Kind.Agent + lk.publish_on_behalf === agent.identity
-     * ✅ CORREGIDO: Detecta agente según documentación oficial de Tavus
-     *
-     * @param {RemoteParticipant} participant - Participante a verificar
-     * @returns {{isAgent: boolean, type: 'main'|'avatar'|null}} Información del agente
+     * Verifica si un participante es el agente Python
      * @private
      */
     _isAgentParticipant(participant) {
@@ -2522,7 +2532,6 @@ class ModernVoiceAgent {
 
         this._emit("agentAudioReady", track, publication);
     }
-
     /**
      * Maneja track de video del avatar worker
      *
