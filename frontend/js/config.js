@@ -775,6 +775,10 @@ class Logger {
         console.warn(`🔍 ${message}`, ...args);
     }
 
+    static info(message, ...args) {
+        console.info(`🔍 ${message}`, ...args);
+    }
+
     static ui(message, ...args) {
         if (CONFIG.debug.showUIEvents) {
             console.log(`🎨 ${message}`, ...args);

@@ -256,11 +256,11 @@ class VoiceAgentApp {
 
     _connectAgentEvents() {
         if (!this._components.agent) {
-            console.error("❌ Agente no disponible para conectar eventos");
+            Logger.error("❌ Agente no disponible para conectar eventos");
             return;
         }
 
-        console.log("🔥 CONECTANDO EVENTOS DEL AGENTE");
+        Logger.debug("🔥 CONECTANDO EVENTOS DEL AGENTE");
         // En app.js, conectar así:
         this._components.agent.on(
             "llmFunctionCall",
@@ -274,7 +274,7 @@ class VoiceAgentApp {
 
         // Status y conexión - ROUTING PURO
         this._components.agent.on("statusChange", (status, type) => {
-            console.log("🔥 EVENTO statusChange RECIBIDO EN APP.JS");
+            Logger.debug("🔥 EVENTO statusChange RECIBIDO EN APP.JS");
             this._components.ui.updateStatus(status, type);
             // Mapear tipos de LiveKit a nuestros presets
             const typeMap = {
@@ -290,7 +290,7 @@ class VoiceAgentApp {
         });
 
         this._components.agent.on("ready", () => {
-            console.log("🔥 EVENTO READY RECIBIDO EN APP.JS");
+            Logger.debug("🔥 EVENTO READY RECIBIDO EN APP.JS");
             this._components.ui.updateStatus(CONFIG.status.READY, "connected"); // ✅ CONFIG
             this._safeTimeoutFromConfig(() => {
                 this._components.ui.showToast(
@@ -353,14 +353,14 @@ class VoiceAgentApp {
         this._components.agent.on(
             "agentTranscriptionReceived",
             (text, isFinal, segment) => {
-                console.log("📝 STEP 6: Recibida transcripción del agente:", {
+                Logger.debug("📝 STEP 6: Recibida transcripción del agente:", {
                     text: text.substring(0, 30),
                     isFinal,
                     currentlyShowingTyping:
                         this._components.ui.state.showingTypingIndicator,
                 });
                 this._components.ui.showTypingIndicator(false);
-                console.log("📝 STEP 7: Typing indicator ocultado");
+                Logger.debug("📝 STEP 7: Typing indicator ocultado");
                 this._handleStreamingMessage(text, isFinal, segment);
             }
         );
@@ -483,7 +483,7 @@ class VoiceAgentApp {
                     this._components.ui.updateConnectionBadge(quality, latency);
 
                     if (CONFIG.debug.showConnectionQuality) {
-                        console.log(
+                        Logger.debug(
                             `📶 Badge actualizado: ${quality} (${latency}ms)`
                         );
                     }
@@ -588,7 +588,7 @@ class VoiceAgentApp {
                 }
 
                 if (CONFIG.debug.showConnectionState) {
-                    console.log(
+                    Logger.debug(
                         `🔗 UI actualizada para estado: ${connectionState}`
                     );
                 }
@@ -613,7 +613,7 @@ class VoiceAgentApp {
             );
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log("🔇 UI alertada sobre silencio en micrófono");
+                Logger.debug("🔇 UI alertada sobre silencio en micrófono");
             }
         });
 
@@ -641,7 +641,7 @@ class VoiceAgentApp {
                 }
 
                 if (CONFIG.debug.showAudioEvents) {
-                    console.log(
+                    Logger.debug(
                         `🎤 UI confirmada publicación de ${publication.kind}`
                     );
                 }
@@ -667,7 +667,7 @@ class VoiceAgentApp {
                 );
 
                 if (CONFIG.debug.showAudioEvents) {
-                    console.log(
+                    Logger.debug(
                         `❌ UI alertada sobre falla de suscripción: ${trackSid}`
                     );
                 }
@@ -694,7 +694,7 @@ class VoiceAgentApp {
             );
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log(
+                Logger.debug(
                     `🎧 UI notificada cambio de ${deviceName}: ${deviceId}`
                 );
             }
@@ -715,7 +715,7 @@ class VoiceAgentApp {
             // this._refreshDeviceSelectors();
 
             if (CONFIG.debug.showAudioEvents) {
-                console.log("🔌 UI notificada sobre cambio de dispositivos");
+                Logger.debug("🔌 UI notificada sobre cambio de dispositivos");
             }
         });
 
@@ -739,10 +739,10 @@ class VoiceAgentApp {
                 this._components.ui.updateStatus(uiStatus, "connected");
                 // ✅ MOSTRAR/OCULTAR TYPING BASADO EN ESTADO
                 if (agentState === "thinking") {
-                    console.log("🤖 ESTADO = THINKING - MOSTRAR TYPING");
+                    Logger.debug("🤖 ESTADO = THINKING - MOSTRAR TYPING");
                     this._components.ui.showTypingIndicator(true);
                 } else if (agentState === "speaking") {
-                    console.log(
+                    Logger.debug(
                         "🤖 ESTADO = SPEAKING - MANTENER TYPING VISIBLE"
                     );
                     // Mantener typing visible hasta que llegue transcripción
@@ -1025,30 +1025,6 @@ class VoiceAgentApp {
     }
 
     /**
-     * Inicializa el gestor de modos de llamada de voz
-     * @private
-     */
-    async _initializeVoiceCallManager() {
-        try {
-            // Verificar disponibilidad
-            if (typeof window.voiceCallManager !== "undefined") {
-                this._components.voiceCallManager = window.voiceCallManager;
-                Logger.debug("VoiceCallManager conectado");
-            } else {
-                Logger.debug(
-                    "VoiceCallManager no disponible, continuando sin él"
-                );
-            }
-        } catch (error) {
-            Logger.debug(
-                "Error inicializando VoiceCallManager:",
-                error.message
-            );
-            // No es crítico, continuar sin él
-        }
-    }
-
-    /**
      * Inicializa el gestor de videollamadas con avatar
      * @private
      */
@@ -1075,12 +1051,23 @@ class VoiceAgentApp {
             // No es crítico, continuar sin él
         }
     }
+
     /**
      * Conecta eventos del video call manager
      * @private
      */
     _connectVideoCallEvents() {
         if (!this._components.videoCallManager) return;
+        // Video del avatar listo
+        this._components.agent.on("avatarVideoTrackReady", (data) => {
+            const { participant } = data;
+            Logger.debug(`📹 Video del avatar listo: ${participant.identity}`);
+
+            this._components.ui.updateStatus(
+                "Video del avatar activo",
+                "connected"
+            );
+        });
 
         // Video call iniciado
         this._components.videoCallManager.on("videoCallStarted", () => {
@@ -1119,127 +1106,55 @@ class VoiceAgentApp {
                 5000
             );
         });
+        // ✅ AGREGAR en _connectVideoCallEvents():
 
+        // Feedback de mute toggle
+        this._components.videoCallManager.on("muteToggled", (isMuted) => {
+            this._components.ui.updateMicState(isMuted);
+            this._components.ui.showToast(
+                isMuted ? "Micrófono silenciado" : "Micrófono activo",
+                "info",
+                2000
+            );
+        });
+
+        // Feedback de camera toggle
+        this._components.videoCallManager.on("cameraToggled", (isEnabled) => {
+            this._components.ui.showToast(
+                isEnabled ? "Cámara activada" : "Cámara desactivada",
+                "info",
+                2000
+            );
+        });
+
+        // Confirmación de avatar video conectado
         this._components.videoCallManager.on(
-            "avatarActivationRequested",
-            (data) => {
-                Logger.info(
-                    "🎭 Solicitud de activación de avatar recibida:",
-                    data.provider
+            "avatarVideoConnected",
+            (track, publication) => {
+                this._components.ui.updateVideoCallState(true, true);
+                this._components.ui.showToast(
+                    "🎬 Avatar renderizado exitosamente",
+                    "success",
+                    3000
                 );
-
-                // ✅ DELEGAR: Al agente para activar avatar
-                this._activateAvatar(data.provider)
-                    .then((avatarInfo) => {
-                        // ✅ NOTIFICAR: VideoCallManager del éxito
-                        this._components.videoCallManager.handleAvatarActivated(
-                            data.provider,
-                            avatarInfo
-                        );
-
-                        // ✅ UI: Toast de confirmación
-                        this._components.ui.showToast(
-                            `🎭 Avatar ${data.provider} activado exitosamente`,
-                            "success",
-                            4000
-                        );
-                    })
-                    .catch((error) => {
-                        Logger.error("❌ Error activando avatar:", error);
-
-                        // ✅ NOTIFICAR: VideoCallManager del error
-                        this._components.videoCallManager.handleAvatarError(
-                            error
-                        );
-
-                        // ✅ UI: Toast de error
-                        this._components.ui.showToast(
-                            `❌ Error activando avatar: ${error.message}`,
-                            "error",
-                            5000
-                        );
-                    });
-            }
-        );
-        // Avatar activation listener
-        this._components.videoCallManager.on(
-            "avatarActivationRequested",
-            async (data) => {
-                try {
-                    console.log(
-                        "🎭 Procesando solicitud de activación de avatar:",
-                        data.provider
-                    );
-
-                    // ✅ ENVIAR: RPC al agente Python
-                    const result = await this._components.agent.sendRPC(
-                        "activate_avatar",
-                        {
-                            provider: data.provider,
-                            timestamp: data.timestamp,
-                        }
-                    );
-
-                    // ✅ RESPONDER: Al VideoCallManager
-                    this._components.videoCallManager.handleAvatarActivationResponse(
-                        data.provider,
-                        result
-                    );
-
-                    // ✅ UI: Toast
-                    if (result && result.success) {
-                        this._components.ui.showToast(
-                            `🎭 Avatar ${data.provider} activado`,
-                            "success",
-                            3000
-                        );
-                    } else {
-                        this._components.ui.showToast(
-                            `❌ Error activando avatar`,
-                            "error",
-                            4000
-                        );
-                    }
-                } catch (error) {
-                    console.error("❌ Error en avatar activation:", error);
-
-                    // ✅ NOTIFICAR: Error al VideoCallManager
-                    this._components.videoCallManager.handleAvatarActivationResponse(
-                        data.provider,
-                        {
-                            success: false,
-                            error: error.message,
-                        }
-                    );
-
-                    this._components.ui.showToast(
-                        `❌ Error activando avatar: ${error.message}`,
-                        "error",
-                        5000
-                    );
-                }
             }
         );
 
-        // Avatar deactivation listener
+        // Limpieza de avatar desactivado
         this._components.videoCallManager.on(
             "avatarDeactivationRequested",
             async (data) => {
-                try {
-                    console.log("🎭 Desactivando avatar...");
-
-                    // ✅ ENVIAR: RPC al agente Python
-                    await this._components.agent.sendRPC("deactivate_avatar", {
-                        timestamp: data.timestamp,
-                    });
-
-                    console.log("✅ Avatar desactivado");
-                } catch (error) {
-                    console.error("❌ Error desactivando avatar:", error);
-                }
+                // Limpiar estado en voice-agent-sdk si es necesario
+                this._components.ui.updateVideoCallState(true, false);
+                this._components.ui.showToast(
+                    "Avatar desactivado",
+                    "info",
+                    2000
+                );
             }
         );
     }
+
     /**
      * ✅ MANTENIDO: Conecta los componentes principales (100% compatible)
      * @private
@@ -1278,12 +1193,12 @@ class VoiceAgentApp {
      * @private
      */
     _setupEventRouting() {
-        console.log(
+        Logger.debug(
             "🔥 CONFIGURANDO EVENT ROUTING ANTES DE INICIALIZAR AGENTE"
         );
 
         if (!this._components.ui) {
-            console.error("❌ UI no inicializado antes de setupEventRouting");
+            Logger.error("❌ UI no inicializado antes de setupEventRouting");
             return;
         }
 
@@ -1298,18 +1213,18 @@ class VoiceAgentApp {
         // Text message sending - LÓGICA EXACTA MANTENIDA
         this._components.ui.on("textSend", async (text) => {
             try {
-                console.log(
+                Logger.debug(
                     "📤 STEP 3: app.js recibió textSend, agregando mensaje usuario"
                 );
                 if (!this._validateAgentReady()) return;
 
                 this._components.ui.addMessage(text, "user");
                 // ✅ MOSTRAR TYPING INDICATOR AQUÍ
-                console.log("📤 STEP 4.5: Mostrando typing indicator...");
+                Logger.debug("📤 STEP 4.5: Mostrando typing indicator...");
                 this._components.ui.showTypingIndicator(true);
-                console.log("📤 STEP 4: Enviando mensaje al agente...");
+                Logger.debug("📤 STEP 4: Enviando mensaje al agente...");
                 await this._components.agent.sendMessage(text);
-                console.log(
+                Logger.debug(
                     "📤 STEP 5: Mensaje enviado al agente exitosamente"
                 );
                 Logger.debug("Mensaje enviado:", text.substring(0, 50));
@@ -1508,14 +1423,14 @@ class VoiceAgentApp {
         this._components.ui.on("muteToggle", async () => {
             try {
                 if (CONFIG.debug.showUIEvents) {
-                    console.log(
+                    Logger.debug(
                         "📡 app.js: Evento muteToggle recibido desde UI"
                     );
                 }
 
                 // ✅ VALIDAR AGENTE DISPONIBLE
                 if (!this._validateAgentReady()) {
-                    console.error("❌ Agent no disponible para mute toggle");
+                    Logger.error("❌ Agent no disponible para mute toggle");
                     this._components.ui.showToast(
                         "Asistente no conectado para controlar micrófono",
                         "warning",
@@ -1544,14 +1459,14 @@ class VoiceAgentApp {
                 this._components.ui.showToast(statusMessage, "info", 2000);
 
                 if (CONFIG.debug.showUIEvents) {
-                    console.log(
+                    Logger.debug(
                         `✅ Micrófono toggle completado: ${
                             isMuted ? "MUTED" : "ACTIVE"
                         }`
                     );
                 }
             } catch (error) {
-                console.error("❌ Error en toggle de micrófono:", error);
+                Logger.error("❌ Error en toggle de micrófono:", error);
 
                 // ✅ ERROR HANDLING - UI solo recibe el error formateado
                 this._components.ui.showToast(
@@ -1596,14 +1511,14 @@ class VoiceAgentApp {
         this._components.ui.on("audioToggle", async () => {
             try {
                 if (CONFIG.debug.showUIEvents) {
-                    console.log(
+                    Logger.debug(
                         "📡 app.js: Evento audioToggle recibido desde UI"
                     );
                 }
 
                 // ✅ VALIDAR AGENTE DISPONIBLE
                 if (!this._validateAgentReady()) {
-                    console.error("❌ Agent no disponible para audio toggle");
+                    Logger.error("❌ Agent no disponible para audio toggle");
                     this._components.ui.showToast(
                         "Asistente no conectado para controlar audio",
                         "warning",
@@ -1619,7 +1534,7 @@ class VoiceAgentApp {
                     !agentState.canPlaybackAudio;
 
                 if (CONFIG.debug.showAudioEvents) {
-                    console.log("🔊 Estado de audio actual:", {
+                    Logger.debug("🔊 Estado de audio actual:", {
                         audioPlaybackAllowed: agentState.audioPlaybackAllowed,
                         canPlaybackAudio: agentState.canPlaybackAudio,
                         audioEnabled: agentState.audioEnabled,
@@ -1634,7 +1549,7 @@ class VoiceAgentApp {
                 if (needsFirstInteraction) {
                     // ✅ PRIMERA INTERACCIÓN - Habilitar audio del navegador
                     if (CONFIG.debug.showAudioEvents) {
-                        console.log(
+                        Logger.debug(
                             "🔊 Ejecutando primera interacción de audio..."
                         );
                     }
@@ -1649,7 +1564,7 @@ class VoiceAgentApp {
                         this._components.ui.updateAudioState(true, false);
 
                         if (CONFIG.debug.showAudioEvents) {
-                            console.log(
+                            Logger.debug(
                                 "✅ Primera interacción de audio exitosa"
                             );
                         }
@@ -1662,7 +1577,7 @@ class VoiceAgentApp {
                 } else {
                     // ✅ TOGGLE NORMAL - Alternar entre escuchar/silenciado
                     if (CONFIG.debug.showAudioEvents) {
-                        console.log("🔊 Ejecutando toggle normal de audio...");
+                        Logger.debug("🔊 Ejecutando toggle normal de audio...");
                     }
 
                     const newAudioState =
@@ -1677,7 +1592,7 @@ class VoiceAgentApp {
                     // ✅ ACTUALIZAR ESTADO UI - Resultado del toggle
                     this._components.ui.updateAudioState(newAudioState, false);
                     if (CONFIG.debug.showAudioEvents) {
-                        console.log(
+                        Logger.debug(
                             `✅ Toggle audio completado: ${
                                 newAudioState ? "ESCUCHANDO" : "SILENCIADO"
                             }`
@@ -1689,10 +1604,10 @@ class VoiceAgentApp {
                 this._components.ui.showToast(message, toastType, 3000);
 
                 if (CONFIG.debug.showUIEvents) {
-                    console.log(`✅ Audio toggle completado exitosamente`);
+                    Logger.debug(`✅ Audio toggle completado exitosamente`);
                 }
             } catch (error) {
-                console.error("❌ Error en toggle de audio:", error);
+                Logger.error("❌ Error en toggle de audio:", error);
 
                 // ✅ ERROR HANDLING ROBUSTO
                 this._components.ui.showToast(
@@ -1712,7 +1627,7 @@ class VoiceAgentApp {
                         stillNeedsInteraction
                     );
                 } catch (recoveryError) {
-                    console.error(
+                    Logger.error(
                         "❌ Error en recuperación de estado de audio:",
                         recoveryError
                     );
@@ -2428,212 +2343,19 @@ class VoiceAgentApp {
     // ========================================
 
     /**
-     * Conecta VideoCallManager con VoiceAgent para avatar workers
-     * @private
-     */
-    async _connectVideoCallManager() {
-        try {
-            // Verificar que VideoCallManager esté disponible
-            if (
-                typeof window.VideoCallManager === "undefined" ||
-                !window.videoCallManager
-            ) {
-                Logger.debug(
-                    "VideoCallManager no disponible, omitiendo integración de video"
-                );
-                return;
-            }
-
-            // Verificar que VoiceAgent esté disponible
-            if (!this._components.agent) {
-                Logger.debug(
-                    "VoiceAgent no disponible para conectar con VideoCallManager"
-                );
-                return;
-            }
-
-            // ✅ CONECTAR VideoCallManager con VoiceAgent
-            window.videoCallManager.connectVoiceAgent(this._components.agent);
-
-            // ✅ Escuchar eventos específicos del VoiceAgent para avatar workers
-            this._setupAvatarWorkerEventListeners();
-
-            // ✅ Escuchar eventos del VideoCallManager
-            this._setupVideoCallEventListeners();
-
-            Logger.debug(
-                "✅ VideoCallManager conectado con VoiceAgent para avatar workers"
-            );
-        } catch (error) {
-            Logger.debug("Error conectando VideoCallManager:", error.message);
-            // No es crítico, continuar sin video call
-        }
-    }
-
-    /**
-     * Configura listeners para eventos de avatar workers del VoiceAgent
-     * @private
-     */
-    _setupAvatarWorkerEventListeners() {
-        // Avatar worker conectado
-        this._components.agent.on("avatarWorkerConnected", (data) => {
-            const { avatarIdentity, agentIdentity } = data;
-            Logger.debug(
-                `🎭 Avatar worker conectado: ${avatarIdentity} para agente: ${agentIdentity}`
-            );
-
-            // Notificar al usuario
-            this._components.ui.showToast(
-                "Avatar digital conectado",
-                "success",
-                2000
-            );
-            this._components.ui.updateStatus("Avatar listo", "connected");
-        });
-
-        // Avatar worker desconectado
-        this._components.agent.on("avatarWorkerDisconnected", (data) => {
-            const { avatarIdentity } = data;
-            Logger.debug(`🎭 Avatar worker desconectado: ${avatarIdentity}`);
-
-            this._components.ui.showToast(
-                "Avatar desconectado",
-                "warning",
-                2000
-            );
-            this._components.ui.updateStatus(
-                "Reconectando avatar...",
-                "connecting"
-            );
-        });
-
-        // Video del avatar listo
-        this._components.agent.on("avatarVideoTrackReady", (data) => {
-            const { participant } = data;
-            Logger.debug(`📹 Video del avatar listo: ${participant.identity}`);
-
-            this._components.ui.updateStatus(
-                "Video del avatar activo",
-                "connected"
-            );
-        });
-
-        Logger.debug("✅ Event listeners de avatar workers configurados");
-    }
-
-    /**
-     * Configura listeners para eventos del VideoCallManager
-     * @private
-     */
-    _setupVideoCallEventListeners() {
-        // Usuario inicia videollamada
-        document.addEventListener("videoCallStart", async (event) => {
-            try {
-                const { timestamp, withUserCamera } = event.detail;
-                Logger.debug("📹 Usuario inició videollamada", {
-                    withUserCamera,
-                });
-
-                // ✅ ACTIVAR MODO DE VOZ si no está activo
-                if (!this._components.agent.getState().voiceModeActive) {
-                    this._components.ui.updateStatus(
-                        "Activando voz + video...",
-                        "connecting"
-                    );
-                    await this._components.agent.enableVoiceMode();
-                    Logger.debug("✅ Modo de voz activado por videollamada");
-                }
-
-                // Actualizar UI para mostrar estado de videollamada
-                this._components.ui.updateStatus(
-                    "Videollamada iniciada",
-                    "connected"
-                );
-                this._components.ui.showToast(
-                    "Conectando con avatar...",
-                    "info",
-                    3000
-                );
-            } catch (error) {
-                Logger.error("❌ Error iniciando videollamada:", error);
-                this._components.ui.showToast(
-                    "Error conectando videollamada",
-                    "error",
-                    3000
-                );
-            }
-        });
-
-        // Usuario termina videollamada
-        document.addEventListener("videoCallEnd", async (event) => {
-            try {
-                const { duration } = event.detail;
-                const durationSec = Math.floor(duration / 1000);
-                Logger.debug(
-                    `📹 Videollamada terminada (duración: ${durationSec}s)`
-                );
-
-                // ✅ DESACTIVAR MODO DE VOZ
-                if (this._components.agent.getState().voiceModeActive) {
-                    await this._components.agent.disableVoiceMode();
-                    Logger.debug("✅ Modo de voz desactivado");
-                }
-
-                // Actualizar UI para volver al chat de texto
-                this._components.ui.updateStatus(
-                    "Videollamada finalizada",
-                    "connected"
-                );
-                this._components.ui.showToast(
-                    `Llamada finalizada (${durationSec}s)`,
-                    "success",
-                    2000
-                );
-            } catch (error) {
-                Logger.error("❌ Error terminando videollamada:", error);
-            }
-        });
-
-        // Avatar video renderizado exitosamente
-        document.addEventListener("avatarVideoRendered", (event) => {
-            const { trackId, dimensions } = event.detail;
-            Logger.debug(
-                `🎭 Avatar video renderizado: ${dimensions.width}x${dimensions.height}`
-            );
-
-            this._components.ui.showToast(
-                "¡Avatar digital activo!",
-                "success",
-                3000
-            );
-            this._components.ui.updateStatus("Avatar en vivo", "connected");
-        });
-
-        // Avatar worker conectado desde VideoCallManager
-        document.addEventListener("avatarWorkerConnected", (event) => {
-            const { avatarIdentity, agentIdentity } = event.detail;
-            Logger.debug(
-                `🎭 Avatar worker conectado vía VideoCallManager: ${avatarIdentity}`
-            );
-        });
-
-        Logger.debug("✅ Event listeners de VideoCallManager configurados");
-    }
-
-    /**
      * Obtiene el estado completo de video call para debugging
      * @returns {Object} Estado completo
      */
     getVideoCallState() {
         if (!this._components.videoCallManager || !this._components.agent) {
-            console.log("❌ Componentes no disponibles");
+            Logger.debug("❌ Componentes no disponibles");
             return;
         }
 
         const agent = this._components.agent;
         const videoManager = this._components.videoCallManager;
 
-        console.log("🎭 AVATAR DEBUG STATE:", {
+        Logger.debug("🎭 AVATAR DEBUG STATE:", {
             // Voice Agent state
             agentConnected: agent._state.connected,
             voiceModeActive: agent._state.voiceModeActive,
@@ -2677,9 +2399,10 @@ class VoiceAgentApp {
         this.updateBotStatus("Listo para conversar", "ready");
 
         if (CONFIG.debug.showUIEvents) {
-            console.log("🧹 Voice activity reseteado");
+            Logger.debug("🧹 Voice activity reseteado");
         }
     }
+
     /**
      * ✅ DELEGAR: Obtiene el estado usando métricas de componentes
      */
@@ -2851,69 +2574,7 @@ class VoiceAgentApp {
             Logger.error("Error durante cleanup:", error);
         }
     }
-    /**
-     * ✅ NUEVO: Activa avatar a través del agente
-     *
-     * Método de orquestación que maneja la activación de avatars
-     * sin exponer directamente el agente a otros componentes.
-     *
-     * @param {string} provider - Proveedor del avatar (tavus, hedra, etc.)
-     * @returns {Promise<Object>} Información del avatar activado
-     * @private
-     */
-    async _activateAvatar(provider = "tavus") {
-        try {
-            if (!this._components.agent) {
-                throw new Error("Agente no disponible para activar avatar");
-            }
 
-            Logger.info(`🎭 Activando avatar provider: ${provider}`);
-
-            // ✅ ENVIAR: Comando al agente Python para activar avatar
-            const result = await this._components.agent.sendRPC(
-                "activate_avatar",
-                {
-                    provider: provider,
-                    timestamp: Date.now(),
-                }
-            );
-
-            if (result && result.success) {
-                Logger.success("🎭 Avatar activado exitosamente via RPC");
-                return {
-                    provider: provider,
-                    activated: true,
-                    timestamp: Date.now(),
-                };
-            } else {
-                throw new Error(result?.message || "Avatar activation failed");
-            }
-        } catch (error) {
-            Logger.error("❌ Error en _activateAvatar:", error);
-
-            // ✅ FALLBACK: Si RPC falla, intentar con comando de datos
-            try {
-                const fallbackData = {
-                    command: "activate_avatar",
-                    provider: provider,
-                    timestamp: Date.now(),
-                };
-
-                await this._components.agent.sendData(fallbackData);
-
-                Logger.info("🎭 Avatar activation enviado via Data (fallback)");
-                return {
-                    provider: provider,
-                    activated: true,
-                    fallback: true,
-                    timestamp: Date.now(),
-                };
-            } catch (fallbackError) {
-                Logger.error("❌ Fallback también falló:", fallbackError);
-                throw new Error(`Avatar activation failed: ${error.message}`);
-            }
-        }
-    }
     // ==========================================
     // 🔧 RPC FUNCTION CALL HANDLER
     // ==========================================
@@ -2969,7 +2630,7 @@ class VoiceAgentApp {
 
         try {
             if (CONFIG.debug.logRpcCalls) {
-                console.log(`🔧 RPC Function Call: ${functionName}`, args);
+                Logger.debug(`🔧 RPC Function Call: ${functionName}`, args);
             }
 
             // Verificar si tenemos un handler específico en UI
@@ -3034,7 +2695,7 @@ class VoiceAgentApp {
                     };
             }
         } catch (error) {
-            console.error(`❌ Error en RPC function ${functionName}:`, error);
+            Logger.error(`❌ Error en RPC function ${functionName}:`, error);
             throw error;
         } finally {
             // Decrementar contador de RPC activas
@@ -3085,7 +2746,7 @@ class VoiceAgentApp {
     _handleAgentCommand(command, params) {
         try {
             if (CONFIG.debug.logRpcCalls) {
-                console.log(`🤖 Agent Command: ${command}`, params);
+                Logger.debug(`🤖 Agent Command: ${command}`, params);
             }
 
             switch (command) {
@@ -3123,7 +2784,7 @@ class VoiceAgentApp {
                     break;
             }
         } catch (error) {
-            console.error(`❌ Error en agent command ${command}:`, error);
+            Logger.error(`❌ Error en agent command ${command}:`, error);
         }
     }
 
@@ -3157,7 +2818,7 @@ class VoiceAgentApp {
     _setupRPCHandlers() {
         // Verificar que UI esté disponible
         if (!this._components.ui) {
-            console.error("❌ UI no disponible para setup RPC handlers");
+            Logger.error("❌ UI no disponible para setup RPC handlers");
             return;
         }
 
@@ -3192,7 +2853,7 @@ class VoiceAgentApp {
                     this._emit("uiStateUpdated", state, data);
                     return { success: true, state, timestamp: Date.now() };
                 } catch (error) {
-                    console.error("❌ Error en update_ui_state:", error);
+                    Logger.error("❌ Error en update_ui_state:", error);
                     return { success: false, error: error.message };
                 }
             }
@@ -3210,7 +2871,7 @@ class VoiceAgentApp {
                         timestamp: Date.now(),
                     };
                 } catch (error) {
-                    console.error("❌ Error en show_notification:", error);
+                    Logger.error("❌ Error en show_notification:", error);
                     return { success: false, error: error.message };
                 }
             }
@@ -3231,13 +2892,13 @@ class VoiceAgentApp {
                     );
                     return { success: true, personaId, timestamp: Date.now() };
                 } catch (error) {
-                    console.error("❌ Error en change_persona:", error);
+                    Logger.error("❌ Error en change_persona:", error);
                     return { success: false, error: error.message };
                 }
             }
         );
 
-        console.log(
+        Logger.debug(
             "🔧 RPC Handlers configurados:",
             Array.from(this._components.ui._rpcHandlers.keys())
         );
@@ -3259,7 +2920,7 @@ class VoiceAgentApp {
      */
     _handleStreamingMessage(text, isFinal, segment = null) {
         if (CONFIG.debug.showUIEvents) {
-            console.log(
+            Logger.debug(
                 `🤖 Agent transcription: "${text.substring(
                     0,
                     30
@@ -3271,7 +2932,7 @@ class VoiceAgentApp {
         if (!isFinal && !CONFIG.features.streamingText) {
             // Modo streamingText = false: IGNORAR texto parcial del agente
             if (CONFIG.debug.showUIEvents) {
-                console.log(
+                Logger.debug(
                     "🤖 Texto parcial del agente IGNORADO (streamingText = false)"
                 );
             }
@@ -3304,7 +2965,7 @@ class VoiceAgentApp {
                 this._streamingState.isActive = true;
 
                 if (CONFIG.debug.showUIEvents) {
-                    console.log("🎤 Iniciando karaoke para agente");
+                    Logger.debug("🎤 Iniciando karaoke para agente");
                 }
             } else {
                 this._components.ui.updateStreamingMessage(
@@ -3326,14 +2987,14 @@ class VoiceAgentApp {
                 this._resetStreamingState();
 
                 if (CONFIG.debug.showUIEvents) {
-                    console.log("✅ Karaoke del agente COMPLETADO");
+                    Logger.debug("✅ Karaoke del agente COMPLETADO");
                 }
             } else {
                 // Crear mensaje final directo (sin streaming previo)
                 this._components.ui.addMessage(text, "bot");
 
                 if (CONFIG.debug.showUIEvents) {
-                    console.log(
+                    Logger.debug(
                         "✅ Mensaje final del agente DIRECTO (sin karaoke)"
                     );
                 }
@@ -3401,7 +3062,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     const originalEnabled = CONFIG.ui.notifications.enabled;
                     CONFIG.ui.notifications.enabled = true;
 
-                    console.log(`🍞 Testing toast: ${type} - ${message}`);
+                    Logger.debug(`🍞 Testing toast: ${type} - ${message}`);
                     const result = ui.showToast(message, type, duration);
 
                     // Restaurar configuración original después de 100ms
@@ -3411,7 +3072,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                     return result;
                 } else {
-                    console.error("❌ UI o showToast no disponible:", {
+                    Logger.error("❌ UI o showToast no disponible:", {
                         ui,
                         showToast: ui?.showToast,
                     });
@@ -3434,7 +3095,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             // Debug específico usando CONFIG
             window.showVoiceMetrics = () => {
-                console.log(app.getVoicePerformanceSummary());
+                Logger.debug(app.getVoicePerformanceSummary());
                 return app._components.agent?.getMetrics() || {};
             };
 
@@ -3462,7 +3123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (window.app) {
                     window.app.debugAvatarState();
                 } else {
-                    console.log("❌ App no disponible");
+                    Logger.debug("❌ App no disponible");
                 }
             };
 
@@ -3472,7 +3133,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         provider
                     );
                 } else {
-                    console.log("❌ Voice agent no disponible");
+                    Logger.debug("❌ Voice agent no disponible");
                     return false;
                 }
             };
@@ -3486,14 +3147,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                         await vm.toggleAvatar();
                     }
                 } else {
-                    console.log("❌ Video call manager no disponible");
+                    Logger.debug("❌ Video call manager no disponible");
                 }
             };
 
-            console.log("🎮 Avatar debug functions available:");
-            console.log("  - debugAvatar()");
-            console.log("  - activateAvatar('tavus')");
-            console.log("  - toggleVideoCall()");
+            Logger.debug("🎮 Avatar debug functions available:");
+            Logger.debug("  - debugAvatar()");
+            Logger.debug("  - activateAvatar('tavus')");
+            Logger.debug("  - toggleVideoCall()");
         }
     } catch (error) {
         Logger.error(

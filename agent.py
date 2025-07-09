@@ -15,11 +15,12 @@ from livekit.agents import (
     JobProcess,
     RoomOutputOptions,
     WorkerOptions,
+    WorkerType,
     cli,
     metrics,
 )
 from livekit.agents.voice import MetricsCollectedEvent
-from livekit.plugins import aws, deepgram, elevenlabs, silero
+from livekit.plugins import aws, bey, deepgram, elevenlabs, silero
 
 from agents.conversational_agent import ConversationalMasterAgent
 from core.config import SystemConfig, UserData, create_user_data, load_persona_config
@@ -110,7 +111,6 @@ async def entrypoint(ctx: JobContext) -> None:
                 # Parámetros adicionales:
                 filler_words=True,  #
                 profanity_filter=False,
-                energy_filter=True,
                 # Boost de vocabulario específico (p. ej. nombres, términos de dominio):
                 keywords=[("LiveKit", 1.5), ("Rosalía", 2.0)],
                 # o para Nova-3 usa keyterms en lugar de keywords:
@@ -141,12 +141,25 @@ async def entrypoint(ctx: JobContext) -> None:
             max_tool_steps=2,
         )
         # 🎭 CREAR AVATAR TAVUS PRIMERO
-        # try:
-        #     avatar = tavus.AvatarSession(replica_id="r9c55f9312fb", persona_id="pb4c3a46bb80")
-        #     await avatar.start(session, room=ctx.room)
-        #     print("🎭 Avatar Tavus activado automáticamente")
-        # except Exception as e:
-        #     print(f"❌ Error activando avatar: {e}")
+        try:
+            # tav_avatar = tavus.AvatarSession(replica_id="r9c55f9312fb", persona_id="pb4c3a46bb80")
+
+            # await tav_avatar.start(session, room=ctx.room)
+
+            # avatar_image = Image.open(os.path.join(os.path.dirname(__file__), "avatar.jpg"))
+            # hedra_avatar = hedra.AvatarSession(
+            #     avatar_image=avatar_image,
+            # )
+            # await hedra_avatar.start(session, room=ctx.room)
+            bey_avatar = bey.AvatarSession(
+                avatar_id="8c37d173-929f-4a71-9a5f-45840bb2422b",
+            )
+
+            # Start the avatar and wait for it to join
+            await bey_avatar.start(session, room=ctx.room)
+            logger.info("🎭 Avatar activado automáticamente")
+        except Exception:
+            logger.info("❌ Error activando avatar: ")
 
         # Configurar métricas
         monitor = get_monitor()
@@ -159,14 +172,15 @@ async def entrypoint(ctx: JobContext) -> None:
 
         # Configurar listeners dinámicos
         _setup_dynamic_listeners(ctx, userdata)
+
         # ✅ CONFIGURAR AUDIO REPLAY - CORREGIDO
         await setup_audio_replay_integration(ctx, session)
+
         # Iniciar sesión
         await session.start(
             agent=agent,
             room=ctx.room,
             room_output_options=RoomOutputOptions(
-                # Disable audio output to the room. The avatar plugin publishes audio separately.
                 audio_enabled=True,
             ),
         )
@@ -281,6 +295,7 @@ if __name__ == "__main__":
             initialize_process_timeout=15.0,
             max_retry=3,
             port=8081,
+            worker_type=WorkerType.ROOM,
         )
 
         cli.run_app(worker_options)

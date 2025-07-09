@@ -33,6 +33,7 @@ const {
     isBrowserSupported,
     LogLevel,
     MediaDeviceFailure,
+    Participant,
     ParticipantEvent,
     RemoteParticipant,
     RemoteTrack,
@@ -1923,6 +1924,15 @@ class ModernVoiceAgent {
                 agentInfo.type === "avatar"
             ) {
                 this._handleAvatarVideoTrack(track, publication);
+
+                // ✅ NUEVO: Emitir evento específico para video-call-manager
+                this._emit("avatarVideoTrackSubscribed", {
+                    track,
+                    publication,
+                    participant,
+                    provider: agentInfo.provider || "unknown",
+                });
+
                 console.log(
                     "✅ Video track del avatar manejado:",
                     participant.identity
@@ -1934,6 +1944,15 @@ class ModernVoiceAgent {
                 participant.identity.includes("avatar")
             ) {
                 this._handleAvatarVideoTrack(track, publication);
+
+                // ✅ NUEVO: Emitir evento específico para fallback
+                this._emit("avatarVideoTrackSubscribed", {
+                    track,
+                    publication,
+                    participant,
+                    provider: "fallback",
+                });
+
                 console.log(
                     "✅ Video track del avatar manejado (fallback):",
                     participant.identity
@@ -2355,14 +2374,23 @@ class ModernVoiceAgent {
         const { kind, identity } = participant;
 
         // ✅ VERIFICAR: kind === 'agent' (todos los agentes LiveKit)
-        if (kind !== "agent") {
-            return { isAgent: false, type: null };
-        }
+        console.log("Participant->", identity);
+        // if (kind !== "agent") {
+        //     return { isAgent: false, type: null };
+        // }
 
         // ✅ TAVUS: Avatar worker tiene identity fija "tavus-avatar-agent"
         if (identity === "tavus-avatar-agent") {
             if (CONFIG.debug.enabled) {
                 Logger.debug("🎭 Tavus avatar worker detectado:", identity);
+            }
+            return { isAgent: true, type: "avatar" };
+        }
+
+        // ✅ HEDRA: Avatar worker tiene identity fija "hedra-avatar-agent"
+        if (identity === "hedra-avatar-agent") {
+            if (CONFIG.debug.enabled) {
+                Logger.debug("🎭 Hedra avatar worker detectado:", identity);
             }
             return { isAgent: true, type: "avatar" };
         }

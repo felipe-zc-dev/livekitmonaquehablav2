@@ -1,29 +1,30 @@
 /**
- * Video Call Manager v1.0 - Fase 1 (Video Básico)
+ * Video Call Manager v1.0 - Fase 1 (Video Básico) - CORREGIDO
  *
  * ARQUITECTURA COMPATIBLE CON PROYECTO EXISTENTE:
  * ✅ Usa CONFIG como fuente de verdad
  * ✅ Integración con ModernVoiceAgent
- * ✅ Event-driven architecture
+ * ✅ Event-driven architecture usando EventTarget
  * ✅ SOLID + DRY + Clean Code
  *
  * FASE 1: Video básico sin avatar (preparación para Tavus/Hedra)
  *
  * @author Video Call Team
- * @version 1.0.0-basic
+ * @version 1.0.0-basic-fixed
  * @since 2024
  * @requires CONFIG, Logger, ModernVoiceAgent
  */
 
 /**
- * Gestor de videollamadas básico
+ * Gestor de videollamadas básico - EXTENDIDO DE EventTarget
  *
  * Maneja la lógica de UI y eventos del modal de video,
  * preparado para integración con avatars en Fase 2.
  *
  * @class VideoCallManager
+ * @extends EventTarget
  */
-class VideoCallManager {
+class VideoCallManager extends EventTarget {
     /**
      * Constructor del gestor de videollamadas
      *
@@ -31,6 +32,7 @@ class VideoCallManager {
      * los patrones existentes del proyecto.
      */
     constructor() {
+        super();
         /**
          * Estado interno del video call
          * @type {Object}
@@ -53,20 +55,17 @@ class VideoCallManager {
         this._elements = {
             // Modal
             videoOverlay: document.getElementById("video-call-overlay"),
-
             // Videos
             avatarVideo: document.getElementById("avatar-video"),
             userVideo: document.getElementById("user-video"),
             avatarFallback: document.getElementById("avatar-fallback"),
             userVideoFallback: document.getElementById("user-video-fallback"),
-
             // Controls
             videoCameraBtn: document.getElementById("videoCameraBtn"),
             videoMuteBtn: document.getElementById("video-mute-btn"),
             videoCameraToggleBtn: document.getElementById("video-camera-btn"),
             videoHangupBtn: document.getElementById("video-hangup-btn"),
             pipCameraToggle: document.getElementById("pip-camera-toggle"),
-
             // Info
             videoDuration: document.getElementById("video-duration"),
             videoSubtitles: document.getElementById("video-subtitles"),
@@ -113,13 +112,6 @@ class VideoCallManager {
             worker: null,
         };
 
-        /**
-         * Referencia al voice agent SDK
-         * @type {ModernVoiceAgent|null}
-         * @private
-         */
-        this._voiceAgent = null;
-
         // Validar elementos críticos
         this._validateElements();
 
@@ -152,7 +144,7 @@ class VideoCallManager {
                 )}`
             );
         }
-        this._connectToVoiceAgent();
+
         if (CONFIG.debug.enabled) {
             Logger.debug("✅ Elementos DOM de video validados correctamente");
         }
@@ -329,15 +321,11 @@ class VideoCallManager {
             if (this._elements.videoOverlay) {
                 this._showVideoModal();
             }
+            // 2. Iniciar timer
+            this._startDurationTimer();
 
             // ✅ OBTENER: Stream del usuario
             await this._requestUserMedia();
-
-            // ✅ NUEVO: EMITIR EVENTO en lugar de llamar directamente al agente
-            this._emit("avatarActivationRequested", {
-                provider: "tavus", // o el provider configurado
-                reason: "video_call_started",
-            });
 
             // ✅ MOSTRAR: Estado de avatar conectándose
             this._showAvatarConnecting("Avatar");
@@ -349,6 +337,12 @@ class VideoCallManager {
             // ✅ LOGGING: Sin hardcode
             if (CONFIG.debug.enabled) {
                 Logger.debug("📹 Videollamada iniciada - esperando avatar");
+            }
+            // ✅ BUSCAR tracks existentes en lugar de activar con RPC
+            const avatarFound = this._findExistingAvatarTracks();
+
+            if (!avatarFound) {
+                this.showSubtitles("Esperando avatar...");
             }
 
             // ✅ EMIT: Evento para app.js
@@ -379,7 +373,7 @@ class VideoCallManager {
             this._state.isActive = false;
             this._state.connectionState = "disconnecting";
             // Desactivar avatar si está activo
-            if (this._avatarState.isActive && this._voiceAgent) {
+            if (this._avatarState.isActive) {
                 // ✅ EMITIR EVENTO en lugar de llamada directa
                 this._emit("avatarDeactivationRequested", {
                     reason: "video_call_ended",
@@ -497,26 +491,55 @@ class VideoCallManager {
                 Logger.debug(
                     "🎬 VideoCallManager: Renderizando video del avatar"
                 );
+                Logger.debug("🎬 Track recibido:", {
+                    trackId: track?.sid,
+                    participant: publication?.participant?.identity,
+                    hasElement: !!this._elements.avatarVideo,
+                    hasTrack: !!track,
+                });
             }
 
             // ✅ VERIFICAR: Elemento existe
             if (!this._elements.avatarVideo) {
-                Logger.error("❌ Elemento avatar-video no encontrado");
+                Logger.error("❌ Elemento avatar-video no encontrado en DOM");
                 return;
             }
 
-            // ✅ CORRECCIÓN CRÍTICA: Usar srcObject directamente en el elemento video existente
-            // NO crear nuevo elemento video - usar el que ya existe en el HTML
-            track.attachTo(this._elements.avatarVideo);
+            if (!track) {
+                Logger.error("❌ Track de video no válido");
+                return;
+            }
 
-            // ✅ ALTERNATIVA si attachTo no funciona:
-            // this._elements.avatarVideo.srcObject = track.mediaStreamTrack.mediaStream;
+            // ✅ MÉTODO CORRECTO: Usar track.attach() para crear nuevo elemento
+            const newVideoElement = track.attach();
 
-            // ✅ CONFIGURAR: Propiedades del video existente
-            this._elements.avatarVideo.autoplay = true;
-            this._elements.avatarVideo.playsInline = true;
-            this._elements.avatarVideo.muted = true;
-            this._elements.avatarVideo.classList.add("loaded");
+            // ✅ CONFIGURAR: Propiedades del nuevo elemento
+            newVideoElement.autoplay = true;
+            newVideoElement.playsInline = true;
+            newVideoElement.muted = true;
+            newVideoElement.id = "avatar-video";
+            newVideoElement.className = "avatar-video-main loaded";
+            newVideoElement.setAttribute("aria-label", "Video del avatar");
+
+            // ✅ ESTILOS: Asegurar visibilidad
+            newVideoElement.style.width = "100%";
+            newVideoElement.style.height = "100%";
+            newVideoElement.style.objectFit = "cover";
+            newVideoElement.style.display = "block";
+
+            // ✅ REEMPLAZAR: En el DOM
+            const container = this._elements.avatarVideo.parentNode;
+            if (container) {
+                container.replaceChild(
+                    newVideoElement,
+                    this._elements.avatarVideo
+                );
+                // ✅ ACTUALIZAR: Referencia interna
+                this._elements.avatarVideo = newVideoElement;
+            } else {
+                Logger.error("❌ Container del video no encontrado");
+                return;
+            }
 
             // ✅ OCULTAR: Fallback
             this._hideAvatarFallback();
@@ -526,101 +549,86 @@ class VideoCallManager {
             this._state.isAvatarVideoEnabled = true;
 
             Logger.debug(
-                "✅ Avatar video asignado directamente al elemento existente"
+                "✅ Avatar video renderizado exitosamente usando track.attach()"
             );
 
             // ✅ TOAST: Confirmación
-            if (window.app && window.app._components.ui) {
+            if (window.app?._components?.ui) {
                 window.app._components.ui.showToast(
                     "🎬 Video avatar conectado correctamente",
                     "success",
                     3000
                 );
             }
-        } catch (error) {
-            Logger.error("❌ Error asignando avatar video:", error);
 
-            // ✅ FALLBACK: Si attachTo falla, usar srcObject directamente
-            try {
-                if (
-                    track &&
-                    track.mediaStreamTrack &&
-                    track.mediaStreamTrack.mediaStream
-                ) {
-                    this._elements.avatarVideo.srcObject =
-                        track.mediaStreamTrack.mediaStream;
-                    Logger.debug(
-                        "✅ Avatar video asignado via srcObject fallback"
-                    );
-                }
-            } catch (fallbackError) {
-                Logger.error("❌ Fallback también falló:", fallbackError);
-                this._showError(
-                    `Error rendering avatar video: ${error.message}`
-                );
-            }
+            // ✅ EMIT: Evento de éxito
+            this._emit("avatarVideoConnected", track, publication);
+        } catch (error) {
+            Logger.error("❌ Error renderizando avatar video:", error);
+
+            // ✅ FALLBACK: Intentar método alternativo
+            this._tryFallbackVideoAttach(track);
         }
     }
 
     /**
-     * ✅ NUEVO: Maneja video track del avatar worker
+     * ✅ CORREGIDO: Método de fallback para video
      *
-     * Este método es llamado desde app.js cuando llega un video track
-     * del avatar worker. Renderiza el video en el elemento apropiado.
-     *
-     * @param {RemoteVideoTrack} track - Track de video del avatar
-     * @param {RemoteTrackPublication} publication - Publicación del track
-     * @public
+     * AGREGAR este método nuevo
+     * @private
      */
-    handleAvatarVideo(track, publication) {
+    _tryFallbackVideoAttach(track) {
         try {
-            if (CONFIG.debug.enabled) {
+            Logger.debug("🔄 Intentando método fallback para avatar video");
+
+            if (track?.mediaStreamTrack) {
+                // Crear MediaStream
+                const stream = new MediaStream([track.mediaStreamTrack]);
+
+                // Asignar al elemento existente
+                this._elements.avatarVideo.srcObject = stream;
+                this._elements.avatarVideo.autoplay = true;
+                this._elements.avatarVideo.playsInline = true;
+                this._elements.avatarVideo.muted = true;
+                this._elements.avatarVideo.style.display = "block";
+                this._elements.avatarVideo.classList.add("loaded");
+
+                // Ocultar fallback
+                this._hideAvatarFallback();
+
                 Logger.debug(
-                    "🎬 VideoCallManager: Renderizando video del avatar"
+                    "✅ Avatar video conectado via método fallback (srcObject)"
                 );
+
+                // Toast
+                if (window.app?._components?.ui) {
+                    window.app._components.ui.showToast(
+                        "🎬 Video avatar conectado (fallback)",
+                        "success",
+                        3000
+                    );
+                }
+
+                return true;
             }
 
-            // ✅ VERIFICAR: Elemento de video existe
-            if (!this._elements.avatarVideo) {
-                Logger.error("❌ Elemento avatar-video no encontrado en DOM");
-                return;
-            }
+            throw new Error("Track mediaStreamTrack no disponible");
+        } catch (fallbackError) {
+            Logger.error("❌ Método fallback también falló:", fallbackError);
 
-            // ✅ ATTACH: Video track al elemento
-            const videoElement = track.attach();
-            videoElement.autoplay = true;
-            videoElement.playsInline = true;
-            videoElement.muted = true; // Avatar video generalmente sin audio directo
+            // Mostrar error en UI
+            this._showAvatarFallback();
+            this._updateAvatarStatus("Error conectando video");
 
-            // ✅ REEMPLAZAR: Contenido del elemento avatar-video
-            this._elements.avatarVideo.innerHTML = "";
-            this._elements.avatarVideo.appendChild(videoElement);
-            this._elements.avatarVideo.classList.add("loaded");
-
-            // ✅ OCULTAR: Avatar fallback
-            if (this._elements.avatarFallback) {
-                this._elements.avatarFallback.style.display = "none";
-            }
-
-            // ✅ ACTUALIZAR: Estado interno
-            this._state.isAvatarVideoEnabled = true;
-
-            // ✅ EMIT: Evento de éxito
-            this._emit("avatarVideoConnected", track, publication);
-
-            // ✅ TOAST: Confirmación visual
-            if (window.app && window.app._components.ui) {
+            if (window.app?._components?.ui) {
                 window.app._components.ui.showToast(
-                    "🎬 Video avatar renderizado exitosamente",
-                    "success",
-                    3000
+                    "❌ Error conectando video del avatar",
+                    "error",
+                    5000
                 );
             }
 
-            Logger.debug("✅ Avatar video renderizado exitosamente");
-        } catch (error) {
-            Logger.error("❌ Error renderizando avatar video:", error);
-            this._showError(`Error rendering avatar video: ${error.message}`);
+            return false;
         }
     }
 
@@ -701,11 +709,6 @@ class VideoCallManager {
      */
     async toggleAvatar() {
         try {
-            if (!this._voiceAgent) {
-                console.warn("⚠️ Voice agent no disponible");
-                return false;
-            }
-
             if (this._avatarState.isActive) {
                 // Desactivar avatar
                 // ✅ EMITIR EVENTO en lugar de llamada directa
@@ -742,12 +745,11 @@ class VideoCallManager {
                 }
             } else {
                 // Activar avatar
-                // ✅ EMITIR EVENTO en lugar de llamada directa
-                this._emit("avatarActivationRequested", {
-                    provider: "tavus",
-                    reason: "video_call_started",
-                    timestamp: Date.now(),
-                });
+                const avatarFound = this._findExistingAvatarTracks();
+
+                if (!avatarFound) {
+                    this.showSubtitles("Avatar no disponible");
+                }
 
                 // ✅ ACTUALIZAR: Estado avatar como solicitado
                 this._avatarState.isRequested = true;
@@ -859,6 +861,127 @@ class VideoCallManager {
     // ==========================================
     // MÉTODOS PRIVADOS
     // ==========================================
+
+    /**
+     * Busca y renderiza video tracks de avatar que ya existen
+     *
+     * @description En lugar de tratar de "activar" un avatar con RPC,
+     * este método busca participants de avatar que ya están conectados
+     * al room de LiveKit y renderiza sus video tracks si están disponibles.
+     *
+     * Flujo:
+     * 1. Verifica si voice-agent-sdk ya detectó un avatar worker
+     * 2. Busca video tracks en ese participant
+     * 3. Renderiza tracks encontrados usando handleAvatarVideo()
+     * 4. Actualiza UI según el resultado
+     *
+     * @private
+     * @returns {boolean} true si encontró y renderizó tracks, false si no
+     *
+     * @example
+     * // Llamado desde startVideoCall() y toggleAvatar()
+     * const found = this._findExistingAvatarTracks();
+     * if (!found) {
+     *     this.showSubtitles("Esperando avatar...");
+     * }
+     *
+     * @since 1.0.0
+     * @author Video Call Team
+     */
+    _findExistingAvatarTracks() {
+        try {
+            if (CONFIG.debug.enabled) {
+                Logger.debug(
+                    "🔍 Buscando video tracks de avatar existentes..."
+                );
+            }
+
+            // ✅ PASO 1: Verificar si voice-agent-sdk detectó avatar worker
+            const agent = window.app?._components?.agent;
+            if (!agent) {
+                if (CONFIG.debug.enabled) {
+                    Logger.debug("❌ Voice agent no disponible");
+                }
+                return false;
+            }
+
+            // ✅ PASO 2: Buscar avatar worker en participants conectados
+            const avatarWorker = agent._avatarWorker;
+            if (!avatarWorker) {
+                if (CONFIG.debug.enabled) {
+                    Logger.debug("❌ Avatar worker no conectado aún");
+                }
+                this._showAvatarFallback();
+                this.showSubtitles("Esperando avatar...");
+                return false;
+            }
+
+            if (CONFIG.debug.enabled) {
+                Logger.debug(
+                    "✅ Avatar worker encontrado:",
+                    avatarWorker.identity
+                );
+            }
+
+            // ✅ PASO 3: Buscar video tracks del avatar worker
+            let videoTrackFound = false;
+
+            avatarWorker.videoTracks.forEach((trackPublication) => {
+                if (
+                    trackPublication.videoTrack &&
+                    trackPublication.isSubscribed
+                ) {
+                    if (CONFIG.debug.enabled) {
+                        Logger.debug("✅ Video track del avatar encontrado:", {
+                            trackSid: trackPublication.trackSid,
+                            source: trackPublication.source,
+                            subscribed: trackPublication.isSubscribed,
+                        });
+                    }
+
+                    // ✅ PASO 4: Renderizar track existente
+                    this.handleAvatarVideo(
+                        trackPublication.videoTrack,
+                        trackPublication
+                    );
+                    videoTrackFound = true;
+
+                    // ✅ ACTUALIZAR: Estado interno
+                    this._avatarState.isActive = true;
+                    this._avatarState.videoTrack = trackPublication.videoTrack;
+                    this._avatarState.worker = avatarWorker;
+                }
+            });
+
+            // ✅ PASO 5: Manejar resultado
+            if (videoTrackFound) {
+                if (CONFIG.debug.enabled) {
+                    Logger.debug(
+                        "✅ Video tracks de avatar renderizados exitosamente"
+                    );
+                }
+                this.showSubtitles("Avatar conectado");
+                return true;
+            } else {
+                if (CONFIG.debug.enabled) {
+                    Logger.debug(
+                        "⚠️ Avatar worker conectado pero sin video tracks disponibles"
+                    );
+                }
+                this._showAvatarFallback();
+                this.showSubtitles("Avatar sin video disponible");
+                return false;
+            }
+        } catch (error) {
+            Logger.error(
+                "❌ Error buscando tracks de avatar existentes:",
+                error
+            );
+            this._showAvatarFallback();
+            this.showSubtitles("Error conectando avatar");
+            return false;
+        }
+    }
 
     /**
      * Solicita acceso a cámara y micrófono del usuario
@@ -1174,22 +1297,6 @@ class VideoCallManager {
     }
 
     /**
-     * Maneja errores de video
-     *
-     * @private
-     * @param {Error} error - Error ocurrido
-     */
-    _handleVideoError(error) {
-        Logger.error("❌ Error en videollamada:", error);
-
-        // Limpiar estado
-        this.endVideoCall();
-
-        // Emitir evento de error
-        this._emit("videoCallError", error);
-    }
-
-    /**
      * Oculta el fallback del avatar
      *
      * AGREGAR este método:
@@ -1233,6 +1340,7 @@ class VideoCallManager {
         this._showAvatarFallback();
         this._updateAvatarStatus("Conectando avatar...");
     }
+
     /**
      * Actualiza el estado del avatar en la UI
      *
@@ -1247,31 +1355,6 @@ class VideoCallManager {
             if (statusElement) {
                 statusElement.textContent = status || "Cargando video...";
             }
-        }
-    }
-
-    /**
-     * Emite eventos personalizados
-     *
-     * @private
-     * @param {string} event - Nombre del evento
-     * @param {...any} args - Argumentos del evento
-     */
-    _emit(event, ...args) {
-        try {
-            const customEvent = new CustomEvent(`videoCall:${event}`, {
-                detail: args,
-            });
-            document.dispatchEvent(customEvent);
-
-            if (CONFIG.debug.enabled) {
-                Logger.debug(
-                    `📹 Evento: ${event}`,
-                    args.length > 0 ? args : ""
-                );
-            }
-        } catch (error) {
-            Logger.error(`❌ Error emitiendo evento ${event}:`, error);
         }
     }
 
@@ -1302,137 +1385,6 @@ class VideoCallManager {
             }
         } catch (error) {
             Logger.error("❌ Error durante cleanup de video:", error);
-        }
-    }
-
-    /**
-     * Conecta con el voice agent SDK
-     * @private
-     */
-    _connectToVoiceAgent() {
-        try {
-            // Buscar voice agent en app global
-            if (
-                window.app &&
-                window.app._components &&
-                window.app._components.agent
-            ) {
-                this._voiceAgent = window.app._components.agent;
-
-                if (CONFIG.debug.enabled) {
-                    Logger.debug("🔗 VideoCallManager connected to VoiceAgent");
-                }
-            } else {
-                // Retry después de un momento si no está disponible
-                setTimeout(() => this._connectToVoiceAgent(), 500);
-            }
-        } catch (error) {
-            Logger.error("❌ Error connecting to voice agent:", error);
-        }
-    }
-
-    /**
-     * Configura event listeners para avatar
-     * @private
-     */
-    _setupAvatarEventListeners() {
-        if (!this._voiceAgent) return;
-
-        // Avatar worker conectado
-        this._voiceAgent.on("avatarWorkerConnected", (worker) => {
-            this._avatarState.worker = worker;
-            this._avatarState.isActive = true;
-            this._avatarState.isRequested = false;
-
-            this._updateVideoButtonState(true);
-            this._showAvatarConnected();
-
-            if (CONFIG.debug.enabled) {
-                Logger.debug("🎭 Avatar worker connected:", worker.identity);
-            }
-        });
-
-        // Video track del avatar recibido
-        this._voiceAgent.on(
-            "avatarVideoTrackReceived",
-            (videoTrack, publication) => {
-                this._avatarState.videoTrack = videoTrack;
-                this._attachAvatarVideoTrack(videoTrack);
-
-                if (CONFIG.debug.enabled) {
-                    Logger.debug("🎥 Avatar video track received");
-                }
-            }
-        );
-
-        // Avatar activación solicitada
-        this._voiceAgent.on("avatarActivationRequested", (provider) => {
-            this._avatarState.isRequested = true;
-            this._updateVideoButtonState(false, true); // loading state
-            this._showAvatarConnecting(provider);
-        });
-
-        // Errores de avatar
-        this._voiceAgent.on("error", (error) => {
-            if (error.includes("avatar")) {
-                this._avatarState.isRequested = false;
-                this._updateVideoButtonState(false);
-                this._showAvatarError(error);
-            }
-        });
-    }
-
-    /**
-     * ✅ CORREGIDO: Conecta video track al elemento HTML existente
-     * @private
-     */
-    _attachAvatarVideoTrack(videoTrack) {
-        try {
-            if (!videoTrack || !this._elements.avatarVideo) return;
-
-            // ✅ LIMPIAR: Track anterior si existe
-            if (
-                this._avatarState.videoTrack &&
-                this._avatarState.videoTrack !== videoTrack
-            ) {
-                this._avatarState.videoTrack.detach();
-            }
-
-            // ✅ CORRECCIÓN: Usar attachTo en lugar de appendChild
-            videoTrack.attachTo(this._elements.avatarVideo);
-
-            // ✅ OCULTAR: Fallback
-            if (this._elements.avatarFallback) {
-                this._elements.avatarFallback.style.display = "none";
-            }
-
-            // ✅ MOSTRAR: Avatar video
-            this._elements.avatarVideo.classList.add("loaded");
-            this._elements.avatarVideo.style.display = "block";
-
-            // ✅ ACTUALIZAR: Estado
-            this._avatarState.videoTrack = videoTrack;
-
-            if (CONFIG.debug.enabled) {
-                Logger.debug(
-                    "🎥 Avatar video track conectado correctamente al elemento HTML"
-                );
-            }
-        } catch (error) {
-            Logger.error("❌ Error conectando avatar video track:", error);
-
-            // ✅ FALLBACK: srcObject directo
-            try {
-                if (
-                    videoTrack.mediaStreamTrack &&
-                    videoTrack.mediaStreamTrack.mediaStream
-                ) {
-                    this._elements.avatarVideo.srcObject =
-                        videoTrack.mediaStreamTrack.mediaStream;
-                }
-            } catch (fallbackError) {
-                Logger.error("❌ Fallback srcObject falló:", fallbackError);
-            }
         }
     }
 
@@ -1479,38 +1431,6 @@ class VideoCallManager {
     }
 
     /**
-     * Muestra estado de avatar conectado
-     * @private
-     */
-    _showAvatarConnected() {
-        // Placeholder hasta que llegue el video track
-        if (this._elements.avatarFallback) {
-            this._elements.avatarFallback.innerHTML = `
-            <div class="avatar-status">
-                <i class="fas fa-check-circle"></i>
-                <span>Avatar conectado</span>
-            </div>
-        `;
-        }
-    }
-
-    /**
-     * Muestra error de avatar
-     * @private
-     */
-    _showAvatarError(error) {
-        if (this._elements.avatarFallback) {
-            this._elements.avatarFallback.innerHTML = `
-            <div class="avatar-status error">
-                <i class="fas fa-exclamation-triangle"></i>
-                <span>Error: ${error}</span>
-            </div>
-        `;
-            this._elements.avatarFallback.style.display = "flex";
-        }
-    }
-
-    /**
      * Muestra error usando toast del sistema
      * @private
      */
@@ -1531,6 +1451,41 @@ class VideoCallManager {
             }
         } catch (error) {
             Logger.error("❌ Error mostrando error:", error);
+        }
+    }
+
+    // ✅ NUEVO: Método on() compatible con el patrón existente
+    on(event, callback) {
+        this.addEventListener(event, callback);
+    }
+
+    // ✅ NUEVO: Método off() para remover listeners
+    off(event, callback) {
+        this.removeEventListener(event, callback);
+    }
+
+    /**
+     * Emite eventos personalizados
+     *
+     * @private
+     * @param {string} event - Nombre del evento
+     * @param {...any} args - Argumentos del evento
+     */
+    _emit(event, ...args) {
+        try {
+            const customEvent = new CustomEvent(event, {
+                detail: args,
+            });
+            this.dispatchEvent(customEvent);
+
+            if (CONFIG.debug.enabled) {
+                Logger.debug(
+                    `📹 VideoCallManager Evento: ${event}`,
+                    args.length > 0 ? args : ""
+                );
+            }
+        } catch (error) {
+            Logger.error(`❌ Error emitiendo evento ${event}:`, error);
         }
     }
 }

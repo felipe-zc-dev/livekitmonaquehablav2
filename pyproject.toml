@@ -24,9 +24,9 @@ classifiers = [
 
 # ✅ DEPENDENCIAS PRINCIPALES - PEP 621 (Poetry 2.0+ soportado)
 dependencies = [
-    "livekit==1.0.6",
-    "livekit-api==1.0.2",
-    "livekit-agents[openai,cartesia,elevenlabs,deepgram,silero,turn-detector,aws,tavus]==1.0.19",
+    "livekit>=1.0.6",
+    "livekit-api>=1.0.2",
+    "livekit-agents[aws,cartesia,deepgram,elevenlabs,hedra,openai,silero,tavus,turn-detector] (>=1.0.19)",
     "Flask>=3.1.0",
     "flask-cors>=5.0.1",
     "python-dotenv>=1.1.0",
@@ -34,6 +34,8 @@ dependencies = [
     "psutil>=7.0.0",
     "pydantic>=2.11.4",
     "structlog>=25.3.0",
+    "pillow (>=11.3.0,<12.0.0)",
+    "livekit-plugins-bey (>=1.1.5,<2.0.0)",
 ]
 
 [project.urls]

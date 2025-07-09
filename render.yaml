@@ -58,6 +58,12 @@ envVarGroups:
         sync: false
       - key: AWS_SECRET_ACCESS_KEY
         sync: false
+      - key: TAVUS_API_KEY
+        sync: false
+      - key: BEY_API_KEY
+        sync: false
+      - key: HEDRA_API_KEY
+        sync: false
       - key: AWS_REGION
         value: "us-east-1"
 

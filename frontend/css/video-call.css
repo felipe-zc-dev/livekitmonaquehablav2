@@ -62,34 +62,42 @@
    ============================================= */
 
 .avatar-video-main {
-    /* Fullscreen como fondo */
+    /* Asegurar visibilidad completa */
+    display: block !important;
+    visibility: visible !important;
+
+    /* Posicionamiento fullscreen */
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 100% !important;
+    height: 100% !important;
 
-    /* Object fit para mantener aspecto */
+    /* Mantener aspecto de video */
     object-fit: cover;
     object-position: center;
 
-    /* Z-index bajo para que esté atrás */
+    /* Z-index para estar atrás de controles */
     z-index: 1;
 
-    /* Transición suave para fade in */
+    /* Estado inicial */
     opacity: 0;
     transition: opacity 500ms ease-out;
+
+    /* Fondo negro mientras carga */
+    background-color: #000000;
 }
 
 .avatar-video-main.loaded {
-    opacity: 1;
+    opacity: 1 !important;
+    display: block !important;
 }
 
 /* Fallback cuando no hay video del avatar */
 .avatar-video-fallback {
     position: absolute;
     inset: 0;
-    z-index: 1;
+    z-index: 2; /* Encima del video hasta que cargue */
 
     /* Fondo usando variables de tema */
     background: linear-gradient(
@@ -108,6 +116,18 @@
     /* Texto */
     color: var(--theme-text-primary);
     text-align: center;
+
+    /* Transición suave */
+    transition: opacity 300ms ease-out;
+}
+/* Ocultar fallback cuando video está activo */
+.video-container:has(.avatar-video-main.loaded) .avatar-video-fallback {
+    display: none !important;
+}
+/* Estado oculto del fallback */
+.avatar-video-fallback.hidden {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .avatar-placeholder {
