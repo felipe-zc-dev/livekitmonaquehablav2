@@ -936,7 +936,7 @@ class VoiceAgentApp {
         });
 
         this._components.agent.on("avatarWorkerConnected", (participant) => {
-            Logger.success("🎭 Avatar Worker conectado:", participant.identity);
+            Logger.debug("🎭 Avatar Worker conectado:", participant.identity);
 
             this._components.ui.updateStatus(
                 "Avatar conectado - Video disponible",
@@ -976,7 +976,7 @@ class VoiceAgentApp {
         this._components.agent.on(
             "avatarVideoTrackReceived",
             (track, publication) => {
-                Logger.success("🎬 Video track del avatar recibido");
+                Logger.debug("🎬 Video track del avatar recibido");
 
                 this._components.ui.updateStatus(
                     "Video avatar activo",
@@ -999,7 +999,7 @@ class VoiceAgentApp {
 
                 // ✅ MÉTRICAS: Tracking de video avatar
                 if (CONFIG.debug.showLatencyMetrics) {
-                    Logger.performance(
+                    Logger.debug(
                         "⚡ Avatar video track procesado exitosamente"
                     );
                 }
@@ -1256,6 +1256,10 @@ class VoiceAgentApp {
                         "connecting"
                     );
                     await this._components.agent.enableVoiceMode();
+                    this._components.ui.updateUserMicrophoneStatus(
+                        true,
+                        "voice"
+                    );
                 }
             } catch (error) {
                 this._components.ui.showToast(
@@ -1287,6 +1291,7 @@ class VoiceAgentApp {
                     // ✅ PASO 1: Usar timeout más corto para evitar cuelgues
                     await Promise.race([
                         this._components.agent.disableVoiceMode(),
+                        this._components.ui.updateUserMicrophoneStatus(false),
                         this._createTimeoutFromConfig("Voice end timeout"),
                     ]);
 
@@ -1681,44 +1686,70 @@ class VoiceAgentApp {
             }
         });
 
-        // ✅ NUEVO: Handler para botón de video (voice + video juntos)
+        /**
+         * Handler para botón de video del header (videoCameraBtn)
+         *
+         * @description Maneja click en videoCameraBtn activando/desactivando videollamada
+         * Coordina entre voice mode y video mode automáticamente
+         *
+         * @listens ui:videoToggle - Evento del botón videoCameraBtn
+         * @since Fix para videoCameraBtn sin handler
+         */
         this._components.ui.on("videoToggle", async () => {
             try {
-                Logger.debug("🎨 UI evento: videoToggle recibido");
+                if (CONFIG.debug.showUIEvents) {
+                    Logger.debug(
+                        "📹 UI evento: videoToggle recibido desde videoCameraBtn"
+                    );
+                }
 
-                // Verificar si video está activo
+                if (!this._validateAgentReady()) {
+                    this._components.ui.showToast(
+                        "Asistente no conectado",
+                        "warning",
+                        3000
+                    );
+                    return;
+                }
+
                 const isVideoActive =
                     window.videoCallManager?.isActive || false;
+                const isVoiceActive =
+                    this._components.agent.getState().voiceModeActive;
 
                 if (isVideoActive) {
-                    // Terminar videollamada
+                    // ✅ TERMINAR VIDEO: Usar endVideoCall que limpia todo
                     await window.videoCallManager.endVideoCall();
-                    Logger.debug("📹 Videollamada terminada vía UI");
+                    Logger.debug("📹 Videollamada terminada vía header button");
                 } else {
-                    // Iniciar videollamada
+                    // ✅ INICIAR VIDEO: Activar voice mode primero si no está activo
+                    if (!isVoiceActive) {
+                        this._components.ui.updateStatus(
+                            "Iniciando modo voz...",
+                            "connecting"
+                        );
+                        await this._components.agent.enableVoiceMode();
+                    }
+
+                    // ✅ INICIAR VIDEOLLAMADA:
                     if (window.videoCallManager) {
                         await window.videoCallManager.startVideoCall();
-                        Logger.debug("📹 Videollamada iniciada vía UI");
-                    } else {
-                        // Fallback: solo activar voz si no hay VideoCallManager
-                        Logger.warn(
-                            "VideoCallManager no disponible, activando solo voz"
+                        Logger.debug(
+                            "📹 Videollamada iniciada vía header button"
                         );
-                        if (
-                            !this._components.agent.getState().voiceModeActive
-                        ) {
-                            await this._components.agent.enableVoiceMode();
-                            this._components.ui.updateStatus(
-                                "Modo voz activo",
-                                "connected"
-                            );
-                        }
+                    } else {
+                        Logger.warn("VideoCallManager no disponible");
+                        this._components.ui.showToast(
+                            "Video no disponible",
+                            "error",
+                            3000
+                        );
                     }
                 }
             } catch (error) {
                 Logger.error("❌ Error en videoToggle:", error);
                 this._components.ui.showToast(
-                    "Error en videollamada",
+                    "Error con videollamada",
                     "error",
                     3000
                 );

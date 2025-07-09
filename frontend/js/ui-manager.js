@@ -791,6 +791,76 @@ class UIManager {
     }
 
     /**
+     * Actualiza indicador visual del estado del micrófono del usuario
+     *
+     * @description Muestra visualmente cuando el micrófono del usuario está
+     * capturando audio (diferente del mute/unmute del bot)
+     *
+     * @param {boolean} isCapturing - Si el micrófono está capturando audio
+     * @param {string} [mode='voice'] - Modo actual: 'voice' | 'video'
+     *
+     * @example
+     * // Desde app.js cuando se activa voice mode:
+     * ui.updateUserMicrophoneStatus(true, 'voice');
+     *
+     * // Cuando se desactiva:
+     * ui.updateUserMicrophoneStatus(false);
+     *
+     * @since Fix para indicador visual de micrófono usuario
+     */
+    updateUserMicrophoneStatus(isCapturing, mode = "voice") {
+        try {
+            // ✅ INDICADOR EN MODO VOZ: Actualizar voice activity
+            if (mode === "voice" && this.elements.voiceActivityLabel) {
+                if (isCapturing) {
+                    this.elements.voiceActivityLabel.textContent =
+                        "🎤 Tu micrófono activo - Habla libremente";
+                    this.elements.voiceActivityLabel.style.color = "#10b981"; // Verde
+                } else {
+                    this.elements.voiceActivityLabel.textContent =
+                        "Micrófono inactivo";
+                    this.elements.voiceActivityLabel.style.color = "#6b7280"; // Gris
+                }
+            }
+
+            // ✅ INDICADOR EN HEADER: Añadir clase al botón de llamada
+            if (this.elements.callBtn) {
+                if (isCapturing) {
+                    this.elements.callBtn.classList.add("mic-active");
+                    this.elements.callBtn.title =
+                        "Micrófono activo - Click para colgar";
+                } else {
+                    this.elements.callBtn.classList.remove("mic-active");
+                    this.elements.callBtn.title = "Iniciar llamada de voz";
+                }
+            }
+
+            // ✅ TOAST INFORMATIVO: Solo la primera vez que se activa
+            if (isCapturing && !this.state.hasShownMicActiveToast) {
+                this.showToast(
+                    "🎤 Tu micrófono está activo - Puedes hablar",
+                    "success",
+                    4000
+                );
+                this.state.hasShownMicActiveToast = true;
+            }
+
+            if (CONFIG.debug.showUIEvents) {
+                Logger.debug(
+                    `🎤 Indicador de micrófono usuario: ${
+                        isCapturing ? "ACTIVO" : "INACTIVO"
+                    } (${mode})`
+                );
+            }
+        } catch (error) {
+            Logger.error(
+                "❌ Error actualizando estado de micrófono usuario:",
+                error
+            );
+        }
+    }
+
+    /**
      * Actualiza el estado visual del botón de audio con estados claros
      *
      * @description Maneja los estados del botón de audio basado SOLO en parámetros

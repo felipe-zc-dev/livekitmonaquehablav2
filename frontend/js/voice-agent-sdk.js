@@ -1892,15 +1892,12 @@ class ModernVoiceAgent {
      * @private
      */
     _onTrackSubscribed(track, publication, participant) {
-        if (CONFIG.debug.showAudioEvents) {
-            Logger.audio(
-                "🎵 Track suscrito:",
-                track.kind,
-                "de",
-                participant.identity
-            );
-        }
-
+        Logger.debug(
+            "🎵 Track suscrito:",
+            track.kind,
+            "de",
+            participant.identity
+        );
         // ✅ MANTENER: Lógica simple que funcionaba para AUDIO
         if (
             track.kind === Track.Kind.Audio &&
@@ -1937,9 +1934,7 @@ class ModernVoiceAgent {
                     "✅ Video track del avatar manejado:",
                     participant.identity
                 );
-            }
-            // También verificar por identity específica de Tavus
-            else if (
+            } else if (
                 participant.identity === "tavus-avatar-agent" ||
                 participant.identity.includes("avatar")
             ) {
@@ -2560,6 +2555,7 @@ class ModernVoiceAgent {
 
         this._emit("agentAudioReady", track, publication);
     }
+
     /**
      * Maneja track de video del avatar worker
      *
@@ -2586,7 +2582,7 @@ class ModernVoiceAgent {
         if (CONFIG.debug.showLatencyMetrics) {
             const videoLatency =
                 performance.now() - this._metrics.connectionStartTime;
-            Logger.performance(
+            Logger.debug(
                 `⚡ Avatar video latency: ${videoLatency.toFixed(0)}ms`
             );
         }

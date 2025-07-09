@@ -345,6 +345,17 @@ class VideoCallManager extends EventTarget {
                 this.showSubtitles("Esperando avatar...");
             }
 
+            if (window.app?._components?.ui) {
+                // Emitir voiceToggle para que app.js active enableVoiceMode()
+                window.app._components.ui._emitUIEvent("voiceToggle");
+
+                if (CONFIG.debug.enabled) {
+                    Logger.debug(
+                        "📹 VideoCallManager → app.js: voiceToggle emitido"
+                    );
+                }
+            }
+
             // ✅ EMIT: Evento para app.js
             this._emit("videoCallStarted");
         } catch (error) {
@@ -427,6 +438,17 @@ class VideoCallManager extends EventTarget {
 
             // Reset estado
             this._resetState();
+
+            if (window.app?._components?.ui) {
+                // Emitir voiceEnd para que app.js llame disableVoiceMode()
+                window.app._components.ui._emitUIEvent("voiceEnd");
+
+                if (CONFIG.debug.enabled) {
+                    Logger.debug(
+                        "📹 VideoCallManager → app.js: voiceEnd emitido"
+                    );
+                }
+            }
 
             // Emitir evento
             this._emit("videoCallEnded");
@@ -641,7 +663,7 @@ class VideoCallManager extends EventTarget {
         try {
             this._state.isMuted = !this._state.isMuted;
 
-            // Actualizar stream de usuario si existe
+            // ✅ MANTENER: Mute local del stream (para preview del usuario)
             if (this._streams.userStream) {
                 const audioTrack = this._streams.userStream.getAudioTracks()[0];
                 if (audioTrack) {
@@ -649,17 +671,21 @@ class VideoCallManager extends EventTarget {
                 }
             }
 
-            // Actualizar UI
-            this._updateMuteButton();
+            // ✅ NUEVO: Usar toggleMicrophone() existente del voice-agent
+            const voiceAgent = window.app?._components?.agent;
+            if (voiceAgent && voiceAgent._state.voiceModeActive) {
+                await voiceAgent.toggleMicrophone();
 
-            // Emitir evento
-            this._emit("muteToggled", this._state.isMuted);
-
-            if (CONFIG.debug.enabled) {
-                Logger.debug(
-                    `🎤 Micrófono: ${this._state.isMuted ? "MUTED" : "ACTIVE"}`
-                );
+                if (CONFIG.debug.enabled) {
+                    Logger.debug(
+                        "📹 VideoCall mute → voice-agent toggleMicrophone()"
+                    );
+                }
             }
+
+            // ✅ MANTENER: UI update y evento
+            this._updateMuteButton();
+            this._emit("muteToggled", this._state.isMuted);
 
             return this._state.isMuted;
         } catch (error) {
@@ -888,6 +914,7 @@ class VideoCallManager extends EventTarget {
      * @since 1.0.0
      * @author Video Call Team
      */
+
     _findExistingAvatarTracks() {
         try {
             if (CONFIG.debug.enabled) {
@@ -896,7 +923,6 @@ class VideoCallManager extends EventTarget {
                 );
             }
 
-            // ✅ PASO 1: Verificar si voice-agent-sdk detectó avatar worker
             const agent = window.app?._components?.agent;
             if (!agent) {
                 if (CONFIG.debug.enabled) {
@@ -905,7 +931,6 @@ class VideoCallManager extends EventTarget {
                 return false;
             }
 
-            // ✅ PASO 2: Buscar avatar worker en participants conectados
             const avatarWorker = agent._avatarWorker;
             if (!avatarWorker) {
                 if (CONFIG.debug.enabled) {
@@ -923,7 +948,21 @@ class VideoCallManager extends EventTarget {
                 );
             }
 
-            // ✅ PASO 3: Buscar video tracks del avatar worker
+            // ✅ FIX: Verificar que videoTracks existe antes de forEach
+            if (
+                !avatarWorker.videoTracks ||
+                typeof avatarWorker.videoTracks.forEach !== "function"
+            ) {
+                if (CONFIG.debug.enabled) {
+                    Logger.debug(
+                        "⚠️ Avatar worker sin videoTracks válidos aún"
+                    );
+                }
+                this._showAvatarFallback();
+                this.showSubtitles("Esperando video del avatar...");
+                return false;
+            }
+
             let videoTrackFound = false;
 
             avatarWorker.videoTracks.forEach((trackPublication) => {
@@ -939,39 +978,20 @@ class VideoCallManager extends EventTarget {
                         });
                     }
 
-                    // ✅ PASO 4: Renderizar track existente
                     this.handleAvatarVideo(
                         trackPublication.videoTrack,
                         trackPublication
                     );
                     videoTrackFound = true;
-
-                    // ✅ ACTUALIZAR: Estado interno
-                    this._avatarState.isActive = true;
-                    this._avatarState.videoTrack = trackPublication.videoTrack;
-                    this._avatarState.worker = avatarWorker;
                 }
             });
 
-            // ✅ PASO 5: Manejar resultado
-            if (videoTrackFound) {
-                if (CONFIG.debug.enabled) {
-                    Logger.debug(
-                        "✅ Video tracks de avatar renderizados exitosamente"
-                    );
-                }
-                this.showSubtitles("Avatar conectado");
-                return true;
-            } else {
-                if (CONFIG.debug.enabled) {
-                    Logger.debug(
-                        "⚠️ Avatar worker conectado pero sin video tracks disponibles"
-                    );
-                }
+            if (!videoTrackFound) {
                 this._showAvatarFallback();
-                this.showSubtitles("Avatar sin video disponible");
-                return false;
+                this.showSubtitles("Preparando video del avatar...");
             }
+
+            return videoTrackFound;
         } catch (error) {
             Logger.error(
                 "❌ Error buscando tracks de avatar existentes:",
