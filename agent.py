@@ -20,7 +20,7 @@ from livekit.agents import (
     metrics,
 )
 from livekit.agents.voice import MetricsCollectedEvent
-from livekit.plugins import aws, bey, deepgram, elevenlabs, silero
+from livekit.plugins import aws, deepgram, elevenlabs, silero
 
 from agents.conversational_agent import ConversationalMasterAgent
 from core.config import SystemConfig, UserData, create_user_data, load_persona_config
@@ -167,12 +167,12 @@ async def entrypoint(ctx: JobContext) -> None:
         # )
         # await hedra_avatar.start(session, room=ctx.room)
 
-        bey_avatar = bey.AvatarSession(
-            avatar_id="8c37d173-929f-4a71-9a5f-45840bb2422b",
-        )
+        # bey_avatar = bey.AvatarSession(
+        #     avatar_id="8c37d173-929f-4a71-9a5f-45840bb2422b",
+        # )
 
-        # Start the avatar and wait for it to join
-        await bey_avatar.start(session, room=ctx.room)
+        # # Start the avatar and wait for it to join
+        # await bey_avatar.start(session, room=ctx.room)
         logger.info("🎭 Avatar activado automáticamente")
 
         # Iniciar sesión
