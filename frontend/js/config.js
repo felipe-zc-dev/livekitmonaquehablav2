@@ -153,9 +153,6 @@ const CONFIG = {
                 stopOnUnpublish: true,
                 simulcast: false,
             },
-
-            // ✅ REMOVIDO: videoCaptureDefaults (no necesario en producción)
-            // ✅ REMOVIDO: turnDetection (error conceptual - va al agente Python)
         },
 
         /**

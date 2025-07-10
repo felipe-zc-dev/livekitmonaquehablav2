@@ -140,26 +140,6 @@ async def entrypoint(ctx: JobContext) -> None:
             max_endpointing_delay=1.5,
             max_tool_steps=2,
         )
-        # 🎭 CREAR AVATAR TAVUS PRIMERO
-        try:
-            # tav_avatar = tavus.AvatarSession(replica_id="r9c55f9312fb", persona_id="pb4c3a46bb80")
-
-            # await tav_avatar.start(session, room=ctx.room)
-
-            # avatar_image = Image.open(os.path.join(os.path.dirname(__file__), "avatar.jpg"))
-            # hedra_avatar = hedra.AvatarSession(
-            #     avatar_image=avatar_image,
-            # )
-            # await hedra_avatar.start(session, room=ctx.room)
-            bey_avatar = bey.AvatarSession(
-                avatar_id="8c37d173-929f-4a71-9a5f-45840bb2422b",
-            )
-
-            # Start the avatar and wait for it to join
-            await bey_avatar.start(session, room=ctx.room)
-            logger.info("🎭 Avatar activado automáticamente")
-        except Exception:
-            logger.info("❌ Error activando avatar: ")
 
         # Configurar métricas
         monitor = get_monitor()
@@ -175,6 +155,25 @@ async def entrypoint(ctx: JobContext) -> None:
 
         # ✅ CONFIGURAR AUDIO REPLAY - CORREGIDO
         await setup_audio_replay_integration(ctx, session)
+
+        # 🎭 CREAR AVATAR
+        # tav_avatar = tavus.AvatarSession(replica_id="r9c55f9312fb", persona_id="pb4c3a46bb80")
+
+        # await tav_avatar.start(session, room=ctx.room)
+
+        # avatar_image = Image.open(os.path.join(os.path.dirname(__file__), "avatar.jpg"))
+        # hedra_avatar = hedra.AvatarSession(
+        #     avatar_image=avatar_image,
+        # )
+        # await hedra_avatar.start(session, room=ctx.room)
+
+        bey_avatar = bey.AvatarSession(
+            avatar_id="8c37d173-929f-4a71-9a5f-45840bb2422b",
+        )
+
+        # Start the avatar and wait for it to join
+        await bey_avatar.start(session, room=ctx.room)
+        logger.info("🎭 Avatar activado automáticamente")
 
         # Iniciar sesión
         await session.start(
