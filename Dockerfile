@@ -15,7 +15,7 @@ ENV PYTHONUNBUFFERED=1 \
 # DEPENDENCIAS DEL SISTEMA - Basadas en tu Dockerfile.local que funciona
 # ============================================================================
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Build essentials (solo lo necesario)
+    build-essential \
     gcc \
     g++ \
     python3-dev \
@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \
     # Networking
+    git \
     curl \
     # SSL certificates
     ca-certificates \

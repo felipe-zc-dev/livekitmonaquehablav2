@@ -27,7 +27,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2-dev \
     pkg-config \
     # SSL certificates
+    # SSL certificates
     ca-certificates \
+    # Git para HuggingFace downloads
+    git \
     # Cleanup
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
@@ -42,20 +45,31 @@ WORKDIR /app
 # =============================================================================
 FROM base AS development
 
-# ✅ COPY DEPENDENCIES - Optimizar Docker cache
+# ✅ CONFIGURAR HUGGINGFACE ANTES DE INSTALAR
+ENV HF_HOME=/app/.cache/huggingface \
+    HF_HUB_CACHE=/app/.cache/huggingface/hub \
+    HF_HUB_OFFLINE=0
+
+# ✅ CREAR DIRECTORIOS DE CACHE
+RUN mkdir -p /app/.cache/huggingface
+
+# ✅ COPY DEPENDENCIES
 COPY requirements.txt* pyproject.toml* ./
 
-# ✅ INSTALL DEPENDENCIES - Con fallback a pip
+# ✅ INSTALL DEPENDENCIES
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# ✅ COPY APPLICATION - MANTENER ESTRUCTURA EXACTA
+# ✅ COPY APPLICATION PARA DOWNLOAD
 COPY agents/ ./agents/
 COPY core/ ./core/
 COPY services/ ./services/
 COPY personas/ ./personas/
 COPY frontend/ ./frontend/
 COPY agent.py ./
+
+# ✅ AÑADIR: DOWNLOAD MODELS EN DEVELOPMENT TAMBIÉN
+RUN python agent.py download-files
 
 # ✅ CREATE DIRECTORIES
 RUN mkdir -p /app/logs
@@ -104,7 +118,15 @@ USER appuser
 # ✅ PRODUCTION HEALTH CHECK
 HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=5 \
     CMD curl -f http://localhost:${PORT:-8081}/health || exit 1
+
+# ✅ AÑADIR: Configurar HuggingFace en Docker
+# ENV HF_HOME=/app/.cache/huggingface
+# ENV HF_HUB_CACHE=/app/.cache/huggingface/hub
+# RUN mkdir -p /app/.cache/huggingface
+
+#✅ AÑADIR: To use the turn-detector, silero, or noise-cancellation plugins, you first need to download the model files:
 RUN python agent.py download-files
+
 # ✅ EXPOSE HEALTH CHECK PORT
 EXPOSE 8081
 

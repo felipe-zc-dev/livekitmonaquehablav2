@@ -617,6 +617,9 @@ class ModernVoiceAgent {
                 this._onMediaDevicesChanged.bind(this)
             );
 
+        // ✅ NUEVO: Text stream handlers (complemento, no reemplazo)
+        // this._setupTextStreamHandlers();
+
         Logger.debug(
             "📡 Event handlers v2.13.6 configurados con chaining pattern + MVP events"
         );
@@ -1220,6 +1223,7 @@ class ModernVoiceAgent {
     getMetrics() {
         return this._getDetailedMetrics();
     }
+
     /**
      * Obtiene la latencia RTT usando APIs CORRECTAS de LiveKit v2.13.6
      *
@@ -1744,6 +1748,186 @@ class ModernVoiceAgent {
             );
             return 0;
         }
+    }
+
+    /**
+     * ✅ NUEVO: Configura text stream handlers para LiveKit Agents v1.0
+     *
+     * COMPLEMENTA RoomEvent.TranscriptionReceived (mantener ambos)
+     * Respeta CONFIG.agent.ioModes y CONFIG.features.streamingText
+     * Integra con lógica existente llamando a _handleAgentTranscription
+     *
+     * @private
+     */
+    _setupTextStreamHandlers() {
+        if (!this._room?.localParticipant) {
+            Logger.warning("⚠️ Room no disponible para text stream handlers");
+            return;
+        }
+
+        // ✅ TRANSCRIPCIONES - Topic desde CONFIG
+        this._room.registerTextStreamHandler(
+            CONFIG.topics.transcription, // "lk.transcription"
+            async (reader, participantInfo) => {
+                try {
+                    // ✅ VERIFICAR si es del agente
+                    const isFromAgent =
+                        this._isAgentParticipant(participantInfo);
+                    if (!isFromAgent) {
+                        if (CONFIG.debug.enabled) {
+                            Logger.debug(
+                                `📝 Text stream ignorado: no es del agente (${participantInfo.identity})`
+                            );
+                        }
+                        return;
+                    }
+
+                    // ✅ DETECTAR tipo de contenido
+                    const isVoiceTranscription =
+                        reader.info.attributes["lk.transcribed_track_id"];
+                    const streamId = reader.info.id;
+                    const timestamp = reader.info.timestamp;
+
+                    // ✅ RESPETAR ioModes - Solo procesar si es modo apropiado
+                    const currentMode = this._getCurrentAgentMode();
+                    if (
+                        currentMode === CONFIG.agent.ioModes.VOICE &&
+                        !isVoiceTranscription
+                    ) {
+                        // En modo VOICE puro, ignorar texto sin audio
+                        if (CONFIG.debug.enabled) {
+                            Logger.debug(
+                                "📝 Texto puro ignorado en modo VOICE"
+                            );
+                        }
+                        return;
+                    }
+
+                    // ✅ PROCESAR según CONFIG.features.streamingText
+                    let finalText;
+                    if (CONFIG.features.streamingText && isVoiceTranscription) {
+                        // OPCIÓN 2: Stream incremental para karaoke
+                        finalText = "";
+                        for await (const chunk of reader) {
+                            finalText += chunk;
+
+                            // Enviar chunk parcial para karaoke
+                            this._handleAgentTranscription(finalText, false, {
+                                source: "textStream",
+                                streamId,
+                                timestamp,
+                                isVoiceTranscription,
+                                isChunk: true,
+                            });
+                        }
+
+                        // Enviar versión final
+                        this._handleAgentTranscription(finalText, true, {
+                            source: "textStream",
+                            streamId,
+                            timestamp,
+                            isVoiceTranscription,
+                            isChunk: false,
+                        });
+                    } else {
+                        // OPCIÓN 1: Leer todo de una vez (como tienes ahora)
+                        finalText = await reader.readAll();
+
+                        // ✅ USAR FUNCIÓN EXISTENTE para mantener compatibilidad
+                        this._handleAgentTranscription(finalText, true, {
+                            source: "textStream",
+                            streamId,
+                            timestamp,
+                            isVoiceTranscription,
+                        });
+                    }
+
+                    if (CONFIG.debug.enabled) {
+                        Logger.debug(
+                            `📝 Text stream procesado: ${
+                                isVoiceTranscription ? "TRANSCRIPCIÓN" : "TEXTO"
+                            } - "${finalText.substring(0, 50)}..."`
+                        );
+                    }
+                } catch (error) {
+                    Logger.error(
+                        "❌ Error procesando text stream transcription:",
+                        error
+                    );
+                }
+            }
+        );
+
+        // ✅ CHAT DIRECTO - Topic desde CONFIG
+        this._room.registerTextStreamHandler(
+            CONFIG.topics.chat, // "lk.chat"
+            async (reader, participantInfo) => {
+                try {
+                    const isFromAgent =
+                        this._isAgentParticipant(participantInfo);
+                    if (!isFromAgent) return;
+
+                    // ✅ RESPETAR ioModes
+                    const currentMode = this._getCurrentAgentMode();
+                    if (currentMode === CONFIG.agent.ioModes.VOICE) {
+                        // En modo VOICE puro, ignorar mensajes de chat
+                        if (CONFIG.debug.enabled) {
+                            Logger.debug(
+                                "💬 Chat message ignorado en modo VOICE puro"
+                            );
+                        }
+                        return;
+                    }
+
+                    const chatMessage = await reader.readAll();
+
+                    // ✅ USAR FUNCIÓN EXISTENTE - tratar como transcripción final
+                    this._handleAgentTranscription(chatMessage, true, {
+                        source: "textStreamChat",
+                        streamId: reader.info.id,
+                        timestamp: reader.info.timestamp,
+                        isVoiceTranscription: false, // Es texto puro
+                    });
+
+                    if (CONFIG.debug.enabled) {
+                        Logger.debug(
+                            `💬 Chat text stream: "${chatMessage.substring(
+                                0,
+                                50
+                            )}..."`
+                        );
+                    }
+                } catch (error) {
+                    Logger.error(
+                        "❌ Error procesando chat text stream:",
+                        error
+                    );
+                }
+            }
+        );
+
+        if (CONFIG.debug.enabled) {
+            Logger.debug("📝 Text stream handlers configurados para:", {
+                transcription: CONFIG.topics.transcription,
+                chat: CONFIG.topics.chat,
+                streamingTextEnabled: CONFIG.features.streamingText,
+                ioModes: CONFIG.agent.ioModes,
+            });
+        }
+    }
+
+    /**
+     * ✅ HELPER: Obtiene modo actual del agente desde CONFIG/state
+     * @private
+     * @returns {string} Modo actual: "text", "voice", "hybrid"
+     */
+    _getCurrentAgentMode() {
+        // Prioridad: sessionConfig > defaultMode from CONFIG
+        return (
+            this._sessionConfig?.agentMode ||
+            CONFIG.agent.defaultMode ||
+            CONFIG.agent.ioModes.HYBRID
+        );
     }
 
     // ==========================================

@@ -41,12 +41,12 @@ const CONFIG = {
      */
     livekit: {
         // URLs del servidor (producción/desarrollo)
-        tokenEndpoint: "https://web-server-mona-e23l.onrender.com/getToken",
-        wsUrl: "wss://monaquehabla-226n27am.livekit.cloud",
+        // tokenEndpoint: "https://web-server-mona-e23l.onrender.com/getToken",
+        // wsUrl: "wss://monaquehabla-226n27am.livekit.cloud",
 
         // URLs alternativas para desarrollo local
-        // tokenEndpoint: "http://localhost:8000/getToken",
-        // wsUrl: "ws://localhost:7880", // validar siempre en prepareConnection y connect de livekit buscar tokenData.url
+        tokenEndpoint: "http://localhost:8000/getToken",
+        wsUrl: "ws://localhost:7880", // validar siempre en prepareConnection y connect de livekit buscar tokenData.url
 
         /**
          * RoomOptions v2.13.6 OFICIAL - FUENTE DE VERDAD
@@ -521,6 +521,20 @@ const CONFIG = {
         logRpcCalls: true,
         /** @type {boolean} ✅ USADO: Log pre-calentamiento de conexión */
         logConnectionPreWarming: true,
+    },
+    /**
+     * test
+     * @namespace CONFIG.test
+     */
+    test: {
+        /** @type {boolean} Modo test - salta validaciones DOM */
+        enabled: false,
+        /** @type {boolean} Solo agente sin UI completa */
+        headlessMode: false,
+        /** @type {boolean} Permitir inicialización sin elementos DOM críticos */
+        skipDOMValidation: false,
+        /** @type {boolean} Prevenir auto-inicio de VoiceAgentApp */
+        preventAutoInit: false,
     },
 
     /**

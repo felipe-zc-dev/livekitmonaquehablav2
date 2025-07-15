@@ -201,6 +201,27 @@ class VoiceAgentApp {
      */
     async _initializeUI() {
         try {
+            // ✅ NUEVO: Verificar si debe saltarse UI en modo test
+            if (CONFIG.test?.enabled && CONFIG.test?.headlessMode) {
+                Logger.debug(
+                    "🧪 Modo test headless - saltando inicialización UI completa"
+                );
+
+                // Crear UIManager en modo mock pero funcional
+                this._components.ui = new window.UIManager();
+
+                // Métodos UI esenciales como no-op para evitar errores
+                this._components.ui.updateStatus = (status, type) => {
+                    console.log(`🧪 Mock UI Status: ${status} (${type})`);
+                };
+
+                this._components.ui.showToast = (message, type, duration) => {
+                    console.log(`🧪 Mock Toast: ${message} (${type})`);
+                };
+
+                Logger.debug("UIManager inicializado en modo mock");
+                return;
+            }
             Logger.debug("Inicializando UIManager v3.0");
 
             this._components.ui = new window.UIManager();
@@ -3071,6 +3092,10 @@ let app = null;
 // Inicializar cuando DOM esté listo usando CONFIG
 document.addEventListener("DOMContentLoaded", async () => {
     try {
+        if (CONFIG.test?.enabled && CONFIG.test?.preventAutoInit) {
+            Logger.debug("🧪 Modo test - auto-inicio deshabilitado");
+            return;
+        }
         Logger.debug(
             "DOM cargado, iniciando Voice Agent App v4.0-config-truth..."
         );

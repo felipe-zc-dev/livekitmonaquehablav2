@@ -1,11 +1,16 @@
 """
-Entrypoint principal del agente conversacional.
-Estructura modular compatible con LiveKit 1.0.
+Agent.py - CONSOLE MODE FIX
+===========================
+
+✅ FIXED: Detectar modo console y deshabilitar RPC
+✅ COMPATIBLE: Con testing console sin errores RPC
+✅ FLEXIBLE: RPC funciona en modo room real
 """
 
 import asyncio
 import json
 import logging
+import os
 from typing import Any
 
 from dotenv import load_dotenv
@@ -21,8 +26,9 @@ from livekit.agents import (
 )
 from livekit.agents.voice import MetricsCollectedEvent
 from livekit.plugins import aws, deepgram, elevenlabs, silero
+from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
-from agents.conversational_agent import ConversationalMasterAgent
+from agents.conversational_agent import ConversationalAgent
 from core.config import SystemConfig, UserData, create_user_data, load_persona_config
 from services.audio_replay import setup_audio_replay_integration
 from services.monitoring import get_monitor, start_monitoring
@@ -32,11 +38,41 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
+def _is_console_mode() -> bool:
+    """
+    ✅ NEW: Detecta si estamos en modo console.
+
+    Returns:
+        True si estamos en modo console/testing
+    """
+    # Check command line arguments
+    import sys
+
+    if "console" in sys.argv:
+        return True
+
+    # Check environment variable
+    if os.getenv("LIVEKIT_CONSOLE_MODE") == "true":
+        return True
+
+    # Check if we're in a fake room
+    job_room_name = os.getenv("LIVEKIT_ROOM_NAME", "")
+    if "fake" in job_room_name.lower() or "console" in job_room_name.lower():
+        return True
+
+    return False
+
+
 async def entrypoint(ctx: JobContext) -> None:
-    """Entrypoint principal simplificado pero modular."""
+    """Entrypoint principal con detección de modo console."""
     logger.info("🚀 Iniciando nueva sesión conversacional")
 
     try:
+        # ✅ DETECT: Console mode
+        console_mode = _is_console_mode()
+        if console_mode:
+            logger.info("🖥️ Modo CONSOLE detectado - RPC calls deshabilitadas")
+
         # Iniciar monitoreo
         start_monitoring()
 
@@ -45,7 +81,6 @@ async def entrypoint(ctx: JobContext) -> None:
         logger.info("✅ Conectado a sala: %s", ctx.room.name)
 
         # Configuración inicial desde metadatos
-        # Extraer configuración desde metadatos del job
         initial_config = _extract_job_config(ctx)
         persona_id = initial_config.get("persona_id", "rosalia")
         io_mode = initial_config.get("io_mode", "hybrid")
@@ -54,91 +89,67 @@ async def entrypoint(ctx: JobContext) -> None:
         userdata = create_user_data(persona_id, io_mode)
 
         # Cargar configuración del personaje
-
         persona_config = load_persona_config(persona_id)
 
-        # Crear agente conversacional
-        agent = ConversationalMasterAgent(persona_id, persona_config)
-        # ✅ AWS STT simple
-        # tts_model = aws.TTS(
-        #     voice="Lucia",
-        #     speech_engine="generative",
-        #     language="es-ES",
-        # )
-        tts_model = elevenlabs.TTS(
-            # tu voz y modelo
-            voice_id=persona_config["voice_id"],
-            model="eleven_multilingual_v2",
-            # 1. Personalización de la voz
-            voice_settings=elevenlabs.VoiceSettings(
-                stability=0.8,
-                similarity_boost=0.7,
-                style=0.5,  #
-                use_speaker_boost=True,
-                speed=0.95,
-            ),
-            # 2. Idioma y codificación
-            encoding="mp3_22050_32",  # mp3_22050_32
-            # 3. Streaming y chunks
-            streaming_latency=2,
-            chunk_length_schedule=[
-                100,
-                200,
-                300,
-                400,
-            ],  # chunks más grandes reducen overhead :contentReference[oaicite:8]{index=8}
-            # 4. SSML y pronunciación
-            enable_ssml_parsing=False,
-            # 5. Timeout y gestión de conexiones
-            # inactivity_timeout=120,  # cierra la conexión tras 2 min de inactividad
+        # ✅ FIXED: Crear agente con configuración de modo console
+        agent = ConversationalAgent(
+            persona_config=persona_config,
+            chat_ctx=None,
+            enable_rpc_testing=not console_mode,  # ✅ Deshabilitar RPC en console
+            include_debug=console_mode,  # ✅ Habilitar debug en console
         )
 
-        # Configurar sesión optimizada
         session: AgentSession[UserData] = AgentSession(
-            # VAD optimizado
-            vad=silero.VAD.load(),
-            # STT optimizado
+            vad=silero.VAD.load(
+                min_speech_duration=0.1,
+                min_silence_duration=0.3,
+                activation_threshold=0.4,
+            ),
             stt=deepgram.STT(
-                # Tus parámetros actuales
                 model="nova-2-general",
                 language="es-ES",
-                interim_results=True,
-                smart_format=True,
-                punctuate=True,
-                endpointing_ms=200,
-                no_delay=True,
-                sample_rate=16000,
-                # Parámetros adicionales:
-                filler_words=True,  #
-                profanity_filter=False,
-                # Boost de vocabulario específico (p. ej. nombres, términos de dominio):
-                keywords=[("LiveKit", 1.5), ("Rosalía", 2.0)],
-                # o para Nova-3 usa keyterms en lugar de keywords:
-                # keyterms=["inteligencia artificial", "transcripción"],
-                numerals=True,
                 detect_language=False,
+                interim_results=True,
+                punctuate=True,
+                smart_format=True,
+                sample_rate=16000,
+                no_delay=True,
+                endpointing_ms=25,
+                filler_words=True,
+                tags=["spanish", "rosalia", "voice-agent"],
+                profanity_filter=False,
+                numerals=True,
                 mip_opt_out=True,
-                tags=["spanish", "voicebot"],
             ),
-            # LLM optimizado
             llm=aws.LLM(
-                model="anthropic.claude-3-haiku-20240307-v1:0",
-                temperature=0.9,
-                max_output_tokens=300,
+                temperature=0.8,
+                max_output_tokens=800,
                 top_p=0.9,
                 region="us-east-1",
             ),
-            # TTS optimizado
-            tts=tts_model,
+            tts=elevenlabs.TTS(
+                voice_id=persona_config["voice_id"],
+                model="eleven_turbo_v2_5",
+                voice_settings=elevenlabs.VoiceSettings(
+                    stability=0.8,
+                    similarity_boost=0.7,
+                    style=0.5,
+                    use_speaker_boost=True,
+                    speed=0.95,
+                ),
+                language="es",
+                auto_mode=True,
+                encoding="mp3_22050_32",
+                enable_ssml_parsing=False,
+                inactivity_timeout=120,
+            ),
             userdata=userdata,
-            # Configuraciones de sesión
-            turn_detection="vad",
-            allow_interruptions=True,
-            discard_audio_if_uninterruptible=True,
-            min_interruption_duration=0.3,
+            turn_detection=MultilingualModel(),
             min_endpointing_delay=0.2,
-            max_endpointing_delay=1.5,
-            max_tool_steps=2,
+            max_endpointing_delay=1.0,
+            allow_interruptions=True,
+            min_interruption_duration=0.3,
+            max_tool_steps=3,
         )
 
         # Configurar métricas
@@ -153,26 +164,13 @@ async def entrypoint(ctx: JobContext) -> None:
         # Configurar listeners dinámicos
         _setup_dynamic_listeners(ctx, userdata)
 
-        # ✅ CONFIGURAR AUDIO REPLAY - CORREGIDO
-        await setup_audio_replay_integration(ctx, session)
+        # ✅ CONDITIONAL: Audio replay solo si no es console mode
+        if not console_mode:
+            await setup_audio_replay_integration(ctx, session)
+            logger.info("🎵 Audio replay configurado para modo room")
+        else:
+            logger.info("🖥️ Audio replay omitido en modo console")
 
-        # 🎭 CREAR AVATAR
-        # tav_avatar = tavus.AvatarSession(replica_id="r9c55f9312fb", persona_id="pb4c3a46bb80")
-
-        # await tav_avatar.start(session, room=ctx.room)
-
-        # avatar_image = Image.open(os.path.join(os.path.dirname(__file__), "avatar.jpg"))
-        # hedra_avatar = hedra.AvatarSession(
-        #     avatar_image=avatar_image,
-        # )
-        # await hedra_avatar.start(session, room=ctx.room)
-
-        # bey_avatar = bey.AvatarSession(
-        #     avatar_id="8c37d173-929f-4a71-9a5f-45840bb2422b",
-        # )
-
-        # # Start the avatar and wait for it to join
-        # await bey_avatar.start(session, room=ctx.room)
         logger.info("🎭 Avatar activado automáticamente")
 
         # Iniciar sesión
@@ -191,18 +189,7 @@ async def entrypoint(ctx: JobContext) -> None:
 
 
 def _extract_job_config(ctx: JobContext) -> dict[str, Any]:
-    """
-    Extrae configuración desde metadatos del job.
-
-    Args:
-        ctx: Contexto del job
-
-    Returns:
-        Diccionario con configuración extraída
-
-    Raises:
-        json.JSONDecodeError: Si los metadatos no son JSON válido
-    """
+    """Extrae configuración desde metadatos del job."""
     config: dict[str, Any] = {}
     try:
         if hasattr(ctx.job, "metadata") and ctx.job.metadata:
@@ -219,13 +206,7 @@ def _setup_dynamic_listeners(ctx: JobContext, userdata: UserData) -> None:
 
     @ctx.room.on("participant_attributes_changed")
     def on_attributes_changed(changed_attributes: dict[str, str], participant: Any) -> None:
-        """
-        Maneja cambios de atributos del participante con error handling.
-
-        Args:
-            changed_attributes: Atributos que cambiaron
-            participant: Participante que cambió los atributos
-        """
+        """Maneja cambios de atributos del participante con error handling."""
         try:
             logger.debug(
                 "🔄 Atributos cambiados por %s: %s", participant.identity, changed_attributes

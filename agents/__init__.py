@@ -2,6 +2,6 @@
 Agents module - Agentes conversacionales.
 """
 
-from .conversational_agent import ConversationalMasterAgent
+from .conversational_agent import ConversationalAgent
 
-__all__ = ["ConversationalMasterAgent"]
+__all__ = ["ConversationalAgent"]
