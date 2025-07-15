@@ -1,7 +1,3 @@
-# Dockerfile.local - OPTIMIZADO para LiveKit Agents v1.0
-# ✅ PRINCIPIO: Misma estructura interna = Mismo comportamiento
-# ✅ COMPATIBLE: Desarrollo local = Producción Render.com
-
 FROM python:3.11-slim AS base
 
 # ============================================================================
@@ -27,7 +23,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2-dev \
     pkg-config \
     # SSL certificates
-    # SSL certificates
     ca-certificates \
     # Git para HuggingFace downloads
     git \
@@ -41,7 +36,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # =============================================================================
-# DEVELOPMENT STAGE - Para Windows local + Hot Reload
+# DEVELOPMENT STAGE - Para desarrollo local como ROOT
 # =============================================================================
 FROM base AS development
 
@@ -68,16 +63,14 @@ COPY personas/ ./personas/
 COPY frontend/ ./frontend/
 COPY agent.py ./
 
-# ✅ AÑADIR: DOWNLOAD MODELS EN DEVELOPMENT TAMBIÉN
+# ✅ AÑADIR: DOWNLOAD MODELS EN DEVELOPMENT
 RUN python agent.py download-files
 
 # ✅ CREATE DIRECTORIES
 RUN mkdir -p /app/logs
 
-# ✅ SECURITY - Non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser \
-    && chown -R appuser:appuser /app
-USER appuser
+# ✅ DESARROLLO: Sin usuario no-root (ejecuta como root)
+# No hay USER appuser - se ejecuta como root para simplicidad
 
 # ✅ HEALTH CHECK
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
@@ -90,9 +83,17 @@ EXPOSE 8000 8081
 CMD ["python", "agent.py", "start"]
 
 # =============================================================================
-# PRODUCTION STAGE - Para Render.com
+# PRODUCTION STAGE - Para Render.com con seguridad no-root
 # =============================================================================
 FROM base AS production
+
+# ✅ CONFIGURAR HUGGINGFACE PRIMERO
+ENV HF_HOME=/app/.cache/huggingface \
+    HF_HUB_CACHE=/app/.cache/huggingface/hub \
+    TRANSFORMERS_CACHE=/app/.cache/huggingface/transformers
+
+# ✅ CREAR DIRECTORIOS DE CACHE
+RUN mkdir -p /app/.cache/huggingface
 
 # ✅ INSTALL PRODUCTION DEPENDENCIES
 COPY requirements.txt ./
@@ -110,7 +111,10 @@ COPY agent.py ./
 # ✅ LOGS DIRECTORY
 RUN mkdir -p /app/logs
 
-# ✅ PRODUCTION SECURITY
+# ✅ DOWNLOAD MODELS ANTES de crear usuario (como root)
+RUN python agent.py download-files
+
+# ✅ PRODUCTION SECURITY - Crear usuario DESPUÉS del download
 RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser \
     && chown -R appuser:appuser /app
 USER appuser
@@ -118,14 +122,6 @@ USER appuser
 # ✅ PRODUCTION HEALTH CHECK
 HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=5 \
     CMD curl -f http://localhost:${PORT:-8081}/health || exit 1
-
-# ✅ AÑADIR: Configurar HuggingFace en Docker
-# ENV HF_HOME=/app/.cache/huggingface
-# ENV HF_HUB_CACHE=/app/.cache/huggingface/hub
-# RUN mkdir -p /app/.cache/huggingface
-
-#✅ AÑADIR: To use the turn-detector, silero, or noise-cancellation plugins, you first need to download the model files:
-RUN python agent.py download-files
 
 # ✅ EXPOSE HEALTH CHECK PORT
 EXPOSE 8081

@@ -1,6 +1,3 @@
-# Dockerfile - OPTIMIZADO para Render.com + LiveKit Agents v1.0
-# Basado en tu Dockerfile.local que funciona + patrones oficiales
-
 FROM python:3.11-slim
 
 # ============================================================================
@@ -36,6 +33,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ============================================================================
 WORKDIR /app
 
+
+# ✅ CONFIGURAR HUGGINGFACE ANTES DE INSTALAR
+ENV HF_HOME=/app/.cache/huggingface \
+    HF_HUB_CACHE=/app/.cache/huggingface/hub
+
+# ✅ CREAR DIRECTORIOS DE CACHE
+RUN mkdir -p /app/.cache/huggingface
+
 # ============================================================================
 # INSTALL DEPENDENCIES - requirements.txt (generado desde Poetry)
 # ============================================================================
@@ -59,7 +64,7 @@ COPY agent.py ./
 RUN mkdir -p /app/logs
 
 # ============================================================================
-# SECURITY - Non-root user
+# SECURITY - Non-root user comentar esto para ser root
 # ============================================================================
 RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser && \
     chown -R appuser:appuser /app
