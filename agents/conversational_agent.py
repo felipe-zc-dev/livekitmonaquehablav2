@@ -8,6 +8,7 @@ Conversational Agent - LiveKit 1.0 DYNAMIC TOOLS
 """
 
 import logging
+from datetime import datetime
 from typing import Any
 
 from livekit.agents import Agent
@@ -183,11 +184,46 @@ class ConversationalAgent(Agent):
             await self.session.say(fallback_greeting, allow_interruptions=True)
 
     def _build_greeting_instructions(self) -> str:
-        """Construye instrucciones dinámicas para el greeting."""
+        """
+        ✅ FIXED: Construye instrucciones dinámicas SIN meta-narrativa.
+
+        CAMBIO CLAVE:
+        - USA toda la info que ya existe en persona_config
+        - SIN meta-narrativa ("Saluda al usuario...")
+        - Instrucciones en primera persona
+        - Permite saludos dinámicos basados en hora
+        - Usa el greeting del YAML como estilo base
+        """
+
+        # ✅ Usar el greeting que ya existe en el YAML
         base_greeting = self.persona_config.get(
             "greeting", f"¡Hola! Soy {self.name}, ¿cómo puedo ayudarte?"
         )
 
+        # ✅ Usar la info de personalidad que ya existe
+        persona_name = self.persona_config.get("name", self.name)
+        persona_age = self.persona_config.get("age", "")
+        persona_country = self.persona_config.get("country", "")
+
+        # ✅ Obtener contexto temporal para saludos dinámicos
+
+        current_hour = datetime.now().hour
+
+        # ✅ Determinar saludo temporal apropiado
+        if 5 <= current_hour < 12:
+            time_greeting = "Buenos días"
+            time_context = "Es una hermosa mañana"
+        elif 12 <= current_hour < 18:
+            time_greeting = "Buenas tardes"
+            time_context = "Es una tarde agradable"
+        elif 18 <= current_hour < 22:
+            time_greeting = "Buenas tardes"
+            time_context = "Es una tarde relajada"
+        else:
+            time_greeting = "Buenas noches"
+            time_context = "Es una noche tranquila"
+
+        # ✅ Verificar si hay conversación previa
         try:
             if (
                 hasattr(self, "_chat_ctx")
@@ -195,22 +231,31 @@ class ConversationalAgent(Agent):
                 and hasattr(self._chat_ctx, "messages")
                 and len(self._chat_ctx.messages) > 0
             ):
+                # ✅ Conversación existente - saludo de regreso
                 return (
-                    f"Continúa la conversación de manera natural como {self.name}. "
-                    f"Saluda brevemente reconociendo que ya han estado hablando y "
-                    f"pregunta cómo puedes seguir ayudando. Mantén tu personalidad."
+                    f"Soy {persona_name}. {time_context} y me alegra que hayas regresado. "
+                    f"Continúo nuestra conversación de manera natural y cálida. "
+                    f"Mi estilo base es: '{base_greeting}' pero adapto el saludo "
+                    f"reconociendo que ya hemos hablado antes."
                 )
-        except (AttributeError, TypeError) as e:
-            logger.debug(
-                "Chat context not ready for history check (normal for fresh conversations): %s",
-                str(e),
-            )
+        except (AttributeError, TypeError):
+            # Normal para conversaciones nuevas
+            pass
 
-        return (
-            f"Saluda al usuario como {self.name}. Usa este estilo como referencia: "
-            f"'{base_greeting}'. Pero hazlo natural y auténtico a tu personalidad. "
-            f"Sé cálido y acogedor."
+        # ✅ INSTRUCCIONES EN PRIMERA PERSONA - SIN META-NARRATIVA
+        # Usa toda la información del YAML sin reinventarla
+        instructions = (
+            f"Soy {persona_name}"
+            f"{f', de {persona_age} años' if persona_age else ''}"
+            f"{f' desde {persona_country}' if persona_country else ''}. "
+            f"{time_context}. "
+            f"Me encuentro con alguien nuevo y quiero darle la bienvenida. "
+            f"Mi saludo natural sería: '{base_greeting}' pero lo adapto "
+            f"usando '{time_greeting}' apropiado para esta hora. "
+            f"Soy auténtica a mi personalidad y hago que se sienta bienvenido."
         )
+
+        return instructions
 
     async def on_user_turn_completed(self, turn_ctx: ChatContext, new_message: ChatMessage) -> None:
         """Hook llamado cuando el usuario completa su turno."""
