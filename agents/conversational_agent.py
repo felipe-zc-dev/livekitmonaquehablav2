@@ -14,9 +14,6 @@ from typing import Any
 from livekit.agents import Agent
 from livekit.agents.llm import ChatContext, ChatMessage
 
-# ✅ DYNAMIC IMPORTS
-from core.tools import get_rpc_testing_tools, get_tools_for_persona, validate_tools_configuration
-
 logger = logging.getLogger(__name__)
 
 
@@ -33,8 +30,6 @@ class ConversationalAgent(Agent):
         self,
         persona_config: dict[str, Any],
         chat_ctx: ChatContext | None = None,
-        enable_rpc_testing: bool = True,
-        include_debug: bool = False,
     ) -> None:
         """
         Inicializa el agente conversacional - DYNAMIC VERSION.
@@ -42,8 +37,6 @@ class ConversationalAgent(Agent):
         Args:
             persona_config: Configuración de personalidad
             chat_ctx: Contexto de chat previo
-            enable_rpc_testing: Si incluir tools de testing RPC
-            include_debug: Si incluir tools de debugging
         """
         # Validate required configuration fields
         required_fields = ["name", "instructions"]
@@ -64,105 +57,22 @@ class ConversationalAgent(Agent):
         self.persona_config = persona_config.copy()
         self.name = persona_config["name"]
         self.persona_id = persona_config.get("persona_id", "rosalia")  # Extract persona ID
-        self.enable_rpc_testing = enable_rpc_testing
-        self.include_debug = include_debug
 
         # ✅ DYNAMIC TOOLS: Get tools specific to this persona
-        tools = self._get_dynamic_tools()
+        # tools = []
 
         # Initialize Agent with dynamic tools
         super().__init__(
             instructions=persona_config["instructions"],
-            tools=tools,
+            # tools=tools,
             chat_ctx=chat_ctx,
         )
 
         logger.info(
-            "🎭 ConversationalAgent inicializado - Persona: %s (%s), Tools: %d",
+            "🎭 ConversationalAgent inicializado - Persona: %s (%s)",
             self.name,
             self.persona_id,
-            len(tools),
         )
-
-        # Log tools configuration
-        self._log_tools_configuration()
-
-    def _get_dynamic_tools(self) -> list[Any]:
-        """
-        ✅ DYNAMIC: Obtiene tools específicas para esta personalidad.
-
-        Returns:
-            Lista de tools configuradas dinámicamente
-        """
-        try:
-            # Get persona-specific tools
-            tools = get_tools_for_persona(
-                self.persona_id,
-                include_debug=self.include_debug,
-                include_rpc=self.enable_rpc_testing,
-            )
-
-            # Add RPC testing tools if needed and not already included
-            if self.enable_rpc_testing:
-                rpc_tools = get_rpc_testing_tools()
-                # Add unique RPC tools not already in the list
-                for rpc_tool in rpc_tools:
-                    if rpc_tool not in tools:
-                        tools.append(rpc_tool)
-
-            logger.debug("🔧 Dynamic tools loaded for %s: %d tools", self.persona_id, len(tools))
-            return tools
-
-        except Exception as e:
-            logger.error("❌ Error loading dynamic tools: %s", str(e))
-            # Fallback to basic tools
-            from core.tools import change_mode, change_persona, get_system_stats, get_user_summary
-
-            return [change_persona, change_mode, get_user_summary, get_system_stats]
-
-    def _log_tools_configuration(self) -> None:
-        """Log de configuración de tools para debugging."""
-        try:
-            # Validate tools configuration
-            validation = validate_tools_configuration()
-            status = validation.get("overall_status", "unknown")
-
-            logger.info("🔧 Tools configuration - Status: %s", status)
-
-            if self.enable_rpc_testing:
-                rpc_status = validation.get("rpc_testing", {})
-                logger.info("🧪 RPC testing ready: %s", rpc_status.get("available", False))
-
-        except Exception as e:
-            logger.warning("⚠️ Could not validate tools configuration: %s", str(e))
-
-    def get_available_tools_info(self) -> dict[str, Any]:
-        """
-        ✅ NEW: Obtiene información sobre las tools disponibles.
-
-        Returns:
-            Información detallada sobre tools disponibles
-        """
-        try:
-            tools = self._get_dynamic_tools()
-
-            from core.tools import validate_tools_configuration
-
-            validation = validate_tools_configuration()
-
-            return {
-                "persona_id": self.persona_id,
-                "persona_name": self.name,
-                "total_tools": len(tools),
-                "rpc_testing_enabled": self.enable_rpc_testing,
-                "debug_enabled": self.include_debug,
-                "system_status": validation.get("overall_status", "unknown"),
-                "rpc_ready": validation.get("rpc_testing", {}).get("available", False),
-            }
-
-        except Exception as e:
-            logger.error("❌ Error getting tools info: %s", str(e))
-            return {"error": str(e)}
 
     # ✅ REST OF CLASS: Sin cambios (same as simple version)
     async def on_enter(self) -> None:
@@ -174,6 +84,8 @@ class ConversationalAgent(Agent):
             await self.session.generate_reply(
                 instructions=greeting_instructions, allow_interruptions=True
             )
+            # greeting = self.persona_config.get("greeting", f"¡Hola! Soy {self.name}")
+            # await self.session.say(greeting)
             logger.debug("💬 Greeting dinámico enviado para %s", self.name)
 
         except Exception as e:
@@ -229,7 +141,6 @@ class ConversationalAgent(Agent):
                 hasattr(self, "_chat_ctx")
                 and self._chat_ctx
                 and hasattr(self._chat_ctx, "messages")
-                and len(self._chat_ctx.messages) > 0
             ):
                 # ✅ Conversación existente - saludo de regreso
                 return (

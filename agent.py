@@ -95,8 +95,6 @@ async def entrypoint(ctx: JobContext) -> None:
         agent = ConversationalAgent(
             persona_config=persona_config,
             chat_ctx=None,
-            enable_rpc_testing=not console_mode,  # ✅ Deshabilitar RPC en console
-            include_debug=console_mode,  # ✅ Habilitar debug en console
         )
 
         session: AgentSession[UserData] = AgentSession(
