@@ -40,13 +40,13 @@ const CONFIG = {
      * @namespace CONFIG.livekit
      */
     livekit: {
-        // URLs del servidor (producción/desarrollo)
-        // tokenEndpoint: "https://web-server-mona-e23l.onrender.com/getToken",
-        // wsUrl: "wss://monaquehabla-226n27am.livekit.cloud",
+        // URLs servidor produccion
+        tokenEndpoint: "https://web-server-mona-e23l.onrender.com/getToken",
+        wsUrl: "wss://monaquehabla-226n27am.livekit.cloud",
 
-        // URLs alternativas para desarrollo local
-        tokenEndpoint: "http://localhost:8000/getToken",
-        wsUrl: "ws://localhost:7880", // validar siempre en prepareConnection y connect de livekit buscar tokenData.url
+        // URLs servidor local
+        // tokenEndpoint: "http://localhost:8000/getToken",
+        // wsUrl: "ws://localhost:7880", // validar siempre en prepareConnection y connect de livekit buscar tokenData.url
 
         /**
          * RoomOptions v2.13.6 OFICIAL - FUENTE DE VERDAD
