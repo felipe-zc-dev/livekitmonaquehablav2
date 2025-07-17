@@ -94,11 +94,6 @@ class UIManager {
      * @returns {Object} Objeto con referencias a elementos DOM
      */
     _getElements() {
-        // ✅ NUEVO: Saltar validación si está en modo test
-        if (CONFIG.test?.enabled && CONFIG.test?.skipDOMValidation) {
-            console.log("🧪 UIManager: Modo test - usando elementos mock");
-            return this._createMockElements();
-        }
         const elements = {
             // Elementos de estado y conexión
             status: document.getElementById("status"),
@@ -146,37 +141,6 @@ class UIManager {
         }
 
         return elements;
-    }
-
-    /**
-     * ✅ NUEVO: Crea elementos mock para testing
-     * @private
-     */
-    _createMockElements() {
-        const mockElement = {
-            addEventListener: () => {},
-            removeEventListener: () => {},
-            classList: { add: () => {}, remove: () => {}, toggle: () => {} },
-            style: {},
-            innerHTML: "",
-            textContent: "",
-            value: "",
-            disabled: false,
-        };
-
-        return {
-            chatContainer: mockElement,
-            textInput: mockElement,
-            sendBtn: mockElement,
-            callBtn: mockElement,
-            messageForm: mockElement,
-            typingIndicator: mockElement,
-            // ... otros elementos como mock
-            audioBtn: mockElement,
-            callOverlay: mockElement,
-            hangupBtn: mockElement,
-            muteBtn: mockElement,
-        };
     }
 
     /**
